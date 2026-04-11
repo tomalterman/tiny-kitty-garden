@@ -63,7 +63,7 @@ function gameLoop(currentTime) {
     drawParticles(ctx);
     drawScorePopups(ctx);
 
-    if (!Engine.state.gameOver) {
+    if (!Engine.state.gameOver && !GAME.hideUI) {
         drawUI(ctx);
     }
 

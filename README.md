@@ -137,7 +137,35 @@ function gameTitleRender(ctx, w, h, time) {
 function gameOverRender(ctx, w, h) {
     // Draw your game world frozen in place
 }
+
+// Optional: handle a tap or click on the canvas during active gameplay.
+// Only fires while the game is running (not on the title or game-over screens).
+// canvasX/canvasY are in game-space coordinates (0..GAME.width, 0..GAME.height).
+function gameTap(canvasX, canvasY) {
+    // e.g., move a character toward the tap, fire a weapon, etc.
+}
 ```
+
+### Hiding the default HUD
+
+The template normally draws a score + hearts HUD and a default title screen on top of
+your game, plus a high-score leaderboard and instructions below the canvas. For games
+that don't want any of that (tap-to-play toddler games, zen experiences, non-scoring
+toys), set `hideUI: true` in the GAME config:
+
+```js
+const GAME = {
+    // ...
+    hideUI: true,
+};
+```
+
+When `hideUI` is true:
+- `drawUI` (score + hearts) is not called during play
+- The engine's default title-screen text is skipped when `gameTitleRender` is defined,
+  so `gameTitleRender` fully owns the title frame
+- The `#highScores` and `#instructions` DOM blocks below the canvas are hidden via CSS
+
 
 ### Step 4: Versioning
 

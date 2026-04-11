@@ -100,6 +100,12 @@ function setupInput() {
             } else {
                 restartGame();
             }
+            return;
+        }
+
+        // Active gameplay: dispatch to game-defined tap handler if present.
+        if (typeof gameTap === 'function') {
+            gameTap(canvasX, canvasY);
         }
     }
 

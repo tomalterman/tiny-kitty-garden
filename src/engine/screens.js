@@ -20,6 +20,12 @@ function drawTitleScreen(ctx) {
         gameTitleRender(ctx, w, h, time);
     }
 
+    // When hideUI is set and the game provides its own title renderer,
+    // skip the engine's default title text, subtitle, prompt, and version.
+    if (GAME.hideUI && typeof gameTitleRender === 'function') {
+        return;
+    }
+
     // Title shadow
     ctx.fillStyle = '#000';
     ctx.font = 'bold 28px monospace';

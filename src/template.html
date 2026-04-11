@@ -124,6 +124,11 @@
             50% { transform: scale(1.2); }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        /* Games that set GAME.hideUI hide the DOM chrome so the canvas is all you see. */
+        body.game-no-ui #highScores,
+        body.game-no-ui #instructions { display: none; }
+        body.game-no-ui #muteBtn { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>

@@ -37,6 +37,10 @@ const Engine = {
         // Initialize input state for all controls
         GAME.controls.forEach(ctrl => { this.input[ctrl.id] = false; });
 
+        if (GAME.hideUI) {
+            document.body.classList.add('game-no-ui');
+        }
+
         setupCanvas();
         Sound.init();
         HighScores.init();

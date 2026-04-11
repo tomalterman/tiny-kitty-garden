@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v6 — Stardew-level visual polish plan + prior-art deepening
+## v6 — Stardew-level visual polish plan + prior-art deepening (`b143afe`)
 
 **What changed**
 

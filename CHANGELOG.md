@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v5 — Add CHANGELOG.md and document the convention in CLAUDE.md
+## v5 — Add CHANGELOG.md and document the convention in CLAUDE.md (`fe83894`)
 
 **What changed**
 

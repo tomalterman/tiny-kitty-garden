@@ -165,7 +165,7 @@
 const GAME = {
     title: 'Tiny Kitty Garden',
     subtitle: '',
-    version: 'v3',
+    version: 'v4',
     bgColor: '#fff4c9',
 
     // Unused — kept for template compatibility.
@@ -1999,7 +1999,7 @@ function buildRooms() {
                 { kind: 'pond',  x: 80,  y: 150, w: 60, h: 28, state: 0 }
             ],
             collectibles: makeGardenCollectibles(),
-            yarnBall: { x: 220, y: 170, collected: false, rolling: false },
+            yarnBall: { x: 250, y: 75, collected: false, rolling: false },
             starsSpawned: false,
             stars: []
         },
@@ -2014,7 +2014,7 @@ function buildRooms() {
                 { kind: 'mouse', x: 300, y: 172, w: 16, h: 14, state: 0, waved: false }
             ],
             collectibles: [], // treats are dispensed by the mouse
-            yarnBall: { x: 60, y: 170, collected: false },
+            yarnBall: { x: 50, y: 60, collected: false },
             starsSpawned: false,
             stars: [],
             treatsOffered: 0
@@ -2028,7 +2028,7 @@ function buildRooms() {
                 { kind: 'bed', x: 250, y: 130, w: 80, h: 40, state: 0 }
             ],
             collectibles: [],
-            yarnBall: { x: 90, y: 170, collected: false },
+            yarnBall: { x: 200, y: 195, collected: false },
             toyBoxFill: 0,
             starsSpawned: false,
             stars: []
@@ -2051,13 +2051,13 @@ function buildRooms() {
 }
 
 function makeGardenCollectibles() {
-    // 5 flowers with unique colors at fixed positions
+    // 5 flowers spread across the top-down field
     const positions = [
         { x: 40,  y: 180 },
-        { x: 160, y: 175 },
-        { x: 200, y: 190 },
-        { x: 280, y: 175 },
-        { x: 340, y: 190 }
+        { x: 170, y: 90  },
+        { x: 220, y: 195 },
+        { x: 305, y: 135 },
+        { x: 360, y: 165 }
     ];
     const flowers = positions.map((p, i) => ({
         kind: 'flower', x: p.x, y: p.y, color: i, collected: false
@@ -2080,9 +2080,10 @@ function makeGardenCollectibles() {
 }
 
 function makeBeachCollectibles() {
+    // Shells scattered across the sandy area below the wave line (y >= 90)
     const positions = [
-        { x: 30,  y: 175 }, { x: 70,  y: 190 }, { x: 130, y: 180 },
-        { x: 200, y: 190 }, { x: 260, y: 175 }, { x: 340, y: 185 }
+        { x: 35,  y: 105 }, { x: 95,  y: 175 }, { x: 145, y: 130 },
+        { x: 215, y: 195 }, { x: 275, y: 110 }, { x: 350, y: 160 }
     ];
     return positions.map((p, i) => ({
         kind: 'shell', x: p.x, y: p.y, shape: i, collected: false
@@ -2092,107 +2093,120 @@ function makeBeachCollectibles() {
 // ---- Room scenery drawers ----
 
 function drawGarden(ctx) {
-    // Grass strip
+    // Top-down: the whole play area is grass.
     ctx.fillStyle = PAL.grass;
-    ctx.fillRect(0, 140, GAME.width, GAME.height - 140);
+    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+
+    // Grass blade dotting for texture
     ctx.fillStyle = PAL.grassDk;
-    ctx.fillRect(0, 140, GAME.width, 2);
-    // Background trees
-    drawTree(ctx, 20, 150);
-    drawTree(ctx, 360, 150);
-    drawTree(ctx, 300, 145);
-    // Bushes
-    drawBush(ctx, 110, 145);
-    drawBush(ctx, 250, 148);
+    for (let i = 0; i < 36; i++) {
+        const x = (i * 53 + 11) % GAME.width;
+        const y = PLAY_TOP + 8 + (i * 31) % (GAME.height - PLAY_TOP - 18);
+        ctx.fillRect(x, y, 2, 1);
+    }
+
+    // Stone path footprints arc through the middle (decorative)
+    ctx.fillStyle = PAL.stone;
+    for (let i = 0; i < 6; i++) {
+        const sx = 60 + i * 50;
+        const sy = 110 + Math.sin(i * 0.7) * 12;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Trees scattered across the field
+    drawTree(ctx, 30, 70);
+    drawTree(ctx, 350, 80);
+    drawTree(ctx, 200, 50);
+
+    // Bushes scattered
+    drawBush(ctx, 110, 60);
+    drawBush(ctx, 280, 70);
+    drawBush(ctx, 60, 200);
+    drawBush(ctx, 320, 200);
+
     // Pond shimmer
     const room = world.rooms.garden;
     const pond = room.hotspots.find(h => h.kind === 'pond');
     drawPond(ctx, pond);
-    // Background micro-flowers (non-collectible)
-    for (let i = 0; i < 10; i++) {
+
+    // Background micro-flowers scattered everywhere
+    for (let i = 0; i < 14; i++) {
         const fx = (i * 37 + 17) % GAME.width;
-        const fy = 155 + (i % 3) * 8;
-        if (i % 5 !== 0) {
-            ctx.fillStyle = PAL.white;
-            ctx.fillRect(fx, fy, 1, 1);
-            ctx.fillRect(fx + 1, fy - 1, 1, 1);
-            ctx.fillRect(fx - 1, fy - 1, 1, 1);
-            ctx.fillRect(fx, fy - 2, 1, 1);
-        }
+        const fy = PLAY_TOP + 20 + (i * 19) % (GAME.height - PLAY_TOP - 30);
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(fx, fy, 1, 1);
+        ctx.fillRect(fx + 1, fy - 1, 1, 1);
+        ctx.fillRect(fx - 1, fy - 1, 1, 1);
+        ctx.fillRect(fx, fy - 2, 1, 1);
     }
 }
 
 function drawKitchen(ctx) {
-    // Floor and wall
-    ctx.fillStyle = PAL.peach;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, 130 - PLAY_TOP);
-    ctx.fillStyle = PAL.peachDk;
-    ctx.fillRect(0, 128, GAME.width, 2);
+    // Top-down: the whole play area is tile floor.
     ctx.fillStyle = PAL.cream;
-    ctx.fillRect(0, 130, GAME.width, GAME.height - 130);
-    // Floor tiles
+    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    // Tile grid
     ctx.fillStyle = PAL.peach;
-    for (let x = 0; x < GAME.width; x += 20) {
-        for (let y = 135; y < GAME.height; y += 20) {
-            ctx.fillRect(x, y, 18, 1);
-            ctx.fillRect(x, y, 1, 18);
-        }
+    for (let x = 0; x < GAME.width; x += 24) {
+        ctx.fillRect(x, PLAY_TOP, 1, GAME.height - PLAY_TOP);
     }
-    // Rug
+    for (let y = PLAY_TOP + 12; y < GAME.height; y += 24) {
+        ctx.fillRect(0, y, GAME.width, 1);
+    }
+    // Cozy rug in the center
     ctx.fillStyle = PAL.red;
-    ctx.fillRect(100, 150, 110, 40);
+    ctx.fillRect(80, 130, 130, 50);
     ctx.fillStyle = PAL.yellow;
-    ctx.fillRect(100, 150, 110, 2);
-    ctx.fillRect(100, 188, 110, 2);
-    for (let i = 0; i < 11; i++) {
-        ctx.fillRect(100 + i * 10, 155, 1, 30);
+    ctx.fillRect(80, 130, 130, 2);
+    ctx.fillRect(80, 178, 130, 2);
+    for (let i = 0; i < 13; i++) {
+        ctx.fillRect(80 + i * 10, 134, 1, 42);
     }
-    // Mouse hole
+    // Mouse hole — round hole on the floor
     ctx.fillStyle = PAL.outline;
     ctx.beginPath();
-    ctx.ellipse(320, 185, 8, 6, 0, Math.PI, Math.PI * 2);
+    ctx.ellipse(330, 175, 11, 7, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = PAL.woodDk;
-    ctx.fillRect(312, 190, 16, 3);
-    // Wall decoration
-    drawKittenPortrait(ctx, 50, 50);
+    ctx.beginPath();
+    ctx.ellipse(330, 173, 9, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function drawBedroom(ctx) {
-    // Wall
+    // Top-down: the whole play area is wood plank floor.
     ctx.fillStyle = PAL.lav;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, 135 - PLAY_TOP);
-    // Wall pattern - tiny stars
+    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    // Plank lines (horizontal grain)
     ctx.fillStyle = PAL.lavDk;
-    for (let i = 0; i < 20; i++) {
-        const x = (i * 29 + 5) % GAME.width;
-        const y = PLAY_TOP + 10 + (i % 5) * 18;
-        ctx.fillRect(x, y, 1, 1);
-        ctx.fillRect(x - 1, y + 1, 3, 1);
-        ctx.fillRect(x, y + 2, 1, 1);
+    for (let y = PLAY_TOP + 14; y < GAME.height; y += 18) {
+        ctx.fillRect(0, y, GAME.width, 1);
     }
-    // Floor
-    ctx.fillStyle = PAL.sky;
-    ctx.fillRect(0, 135, GAME.width, GAME.height - 135);
-    ctx.fillStyle = PAL.skyDk;
-    ctx.fillRect(0, 135, GAME.width, 2);
-    for (let x = 0; x < GAME.width; x += 24) {
-        ctx.fillRect(x, 140, 1, GAME.height - 140);
+    // Plank seams (vertical breaks, offset per row)
+    for (let row = 0; row < 12; row++) {
+        const y = PLAY_TOP + row * 18;
+        const x = ((row % 2) * 60 + 30) + ((row * 53) % 200);
+        ctx.fillRect(x, y, 1, 18);
     }
+    // Cozy oval rug in the center
+    ctx.fillStyle = PAL.pink;
+    ctx.beginPath();
+    ctx.ellipse(160, 130, 50, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.red;
+    ctx.beginPath();
+    ctx.ellipse(160, 130, 44, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.pink;
+    ctx.beginPath();
+    ctx.ellipse(160, 130, 36, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
     // Bed
     drawBed(ctx, world.rooms.bedroom.hotspots.find(h => h.kind === 'bed'));
-    // Toy box
-    drawToyBox(ctx, 30, 160, world.rooms.bedroom.toyBoxFill);
-    // Window
-    ctx.fillStyle = PAL.sky;
-    ctx.fillRect(140, 40, 40, 30);
-    ctx.fillStyle = PAL.outline;
-    ctx.fillRect(140, 40, 40, 1);
-    ctx.fillRect(140, 70, 40, 1);
-    ctx.fillRect(140, 40, 1, 30);
-    ctx.fillRect(180, 40, 1, 30);
-    ctx.fillRect(158, 40, 1, 30);
-    ctx.fillRect(140, 55, 40, 1);
+    // Toy box (top-left corner of the play area)
+    drawToyBox(ctx, 30, 50, world.rooms.bedroom.toyBoxFill);
 }
 
 function drawBeach(ctx) {
@@ -2227,25 +2241,49 @@ function drawBeach(ctx) {
 }
 
 function drawTree(ctx, x, y) {
-    ctx.fillStyle = PAL.woodDk;
-    ctx.fillRect(x - 2, y - 15, 4, 20);
-    ctx.fillStyle = PAL.grass;
+    // Top-down tree: round canopy seen from above with a tiny brown center
+    // (the trunk peeking through), and a soft shadow.
+    ctx.fillStyle = PAL.shadow;
     ctx.beginPath();
-    ctx.arc(x, y - 18, 12, 0, Math.PI * 2);
+    ctx.ellipse(x + 2, y + 13, 13, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.mintDp;
+    ctx.beginPath();
+    ctx.arc(x, y, 13, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = PAL.grassDk;
     ctx.beginPath();
-    ctx.arc(x - 4, y - 22, 5, 0, Math.PI * 2);
+    ctx.arc(x, y, 11, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = PAL.grass;
+    ctx.beginPath();
+    ctx.arc(x - 2, y - 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x - 1, y - 1, 2, 2);
 }
 
 function drawBush(ctx, x, y) {
+    ctx.fillStyle = PAL.shadow;
+    ctx.beginPath();
+    ctx.ellipse(x + 1, y + 6, 9, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.mintDp;
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.arc(x + 5, y - 1, 6, 0, Math.PI * 2);
+    ctx.arc(x - 5, y - 1, 6, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = PAL.grassDk;
     ctx.beginPath();
-    ctx.arc(x, y, 7, 0, Math.PI * 2);
-    ctx.arc(x + 5, y, 6, 0, Math.PI * 2);
-    ctx.arc(x - 5, y, 6, 0, Math.PI * 2);
+    ctx.arc(x, y - 1, 6, 0, Math.PI * 2);
+    ctx.arc(x + 4, y - 2, 4, 0, Math.PI * 2);
+    ctx.arc(x - 4, y - 2, 4, 0, Math.PI * 2);
     ctx.fill();
+    // Tiny berry highlights
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x - 1, y - 3, 1, 1);
+    ctx.fillRect(x + 3, y - 1, 1, 1);
 }
 
 function drawPond(ctx, pond) {
@@ -2298,17 +2336,25 @@ function drawBed(ctx, bed) {
 }
 
 function drawToyBox(ctx, x, y, fill) {
+    // Top-down chest: open lid with a slightly inset interior
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(x + 2, y + 22, 34, 2);
     ctx.fillStyle = PAL.woodDk;
-    ctx.fillRect(x, y, 34, 22);
+    ctx.fillRect(x, y, 36, 24);
     ctx.fillStyle = PAL.wood;
-    ctx.fillRect(x + 2, y + 2, 30, 18);
+    ctx.fillRect(x + 2, y + 2, 32, 20);
+    // Plank seams
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 12, y + 2, 1, 20);
+    ctx.fillRect(x + 23, y + 2, 1, 20);
+    // Yellow tag
     ctx.fillStyle = PAL.yellow;
-    ctx.fillRect(x + 12, y + 8, 10, 6);
-    ctx.fillStyle = PAL.outline;
-    ctx.font = 'bold 4px monospace';
-    // Filled yarn balls peek out
+    ctx.fillRect(x + 14, y + 9, 8, 6);
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(x + 14, y + 9, 8, 1);
+    // Filled yarn balls peek out the top
     for (let i = 0; i < fill; i++) {
-        drawYarnBall(ctx, x + 4 + i * 7, y - 2, i, true);
+        drawYarnBall(ctx, x + 5 + i * 8, y - 4, i, true);
     }
 }
 
@@ -2340,10 +2386,11 @@ function triggerHotspot(hs, room) {
     for (const other of room.hotspots) {
         if (other !== hs) other.queued = false;
     }
+    // Every interaction walks the kitten to the hotspot first; the reaction
+    // fires on arrival inside updateHotspots. This makes the world feel like
+    // the kitten is inhabiting it instead of remote-controlling it.
     if (hs.kind === 'pond') {
-        // Frog hops regardless of kitten position
-        hs.state = 30;
-        Sound.play('ribbit');
+        queueHotspotWalk(hs, hs.x + hs.w / 2, hs.y + hs.h + 8);
     } else if (hs.kind === 'food') {
         queueHotspotWalk(hs, hs.x + hs.w / 2, hs.y + hs.h + 4);
     } else if (hs.kind === 'milk') {
@@ -2352,16 +2399,12 @@ function triggerHotspot(hs, room) {
         if (hs.state > 0) return; // ignore taps while sleeping
         queueHotspotWalk(hs, hs.x + hs.w / 2 - 14, hs.y + hs.h + 6);
     } else if (hs.kind === 'waves') {
-        // Splash happens over wherever the kitten ends up on the wet sand
+        // Splash happens wherever the kitten ends up on the wet sand
         queueHotspotWalk(hs, Math.max(20, Math.min(GAME.width - 20, k.x)), PLAY_TOP + 56);
     } else if (hs.kind === 'crab') {
-        hs.state = 60;
-        hs.offset = 0;
-        Sound.play('scuttle');
+        queueHotspotWalk(hs, hs.x + hs.w / 2, hs.y + hs.h + 6);
     } else if (hs.kind === 'mouse') {
-        // Extra mrrp
-        spawnFloater({ kind: 'mrrp', x: hs.x + hs.w / 2, y: hs.y - 4, vy: -0.3, life: 40, maxLife: 40 });
-        Sound.play('mew');
+        queueHotspotWalk(hs, hs.x - 14, hs.y + hs.h);
     }
 }
 
@@ -2370,24 +2413,6 @@ function updateHotspots(dt) {
     const k = world.kitten;
 
     for (const hs of room.hotspots) {
-        // Kitchen mouse first-entry wave
-        if (hs.kind === 'mouse' && !hs.waved) {
-            hs.state = 90;
-            hs.waved = true;
-            // After wave, drop a treat. Re-check the cap inside the callback
-            // so rapid re-entries can't over-fill past 4.
-            setTimeout(() => {
-                if (room.treatsOffered >= 4) return;
-                room.collectibles.push({
-                    kind: 'treat',
-                    x: hs.x - 18,
-                    y: hs.y + 2,
-                    collected: false,
-                    index: room.treatsOffered++
-                });
-            }, 600);
-        }
-
         // Advance state timers
         if (hs.state > 0) hs.state -= dt;
 
@@ -2444,6 +2469,33 @@ function updateHotspots(dt) {
                     }
                     spawnFloater({ kind: 'mrrp', x: k.x, y: k.y - KITTEN_H - 2, vy: -0.3, life: 30, maxLife: 30 });
                     Sound.play('giggle');
+                } else if (hs.kind === 'pond') {
+                    // Frog hops out and ribbits — kitten is now standing next to the pond
+                    hs.state = 30;
+                    Sound.play('ribbit');
+                    k.busy = null; // pond reaction is brief; let kitten stay free
+                } else if (hs.kind === 'crab') {
+                    hs.state = 60;
+                    hs.offset = 0;
+                    Sound.play('scuttle');
+                    k.busy = null;
+                } else if (hs.kind === 'mouse') {
+                    // Mouse waves and then drops a treat
+                    hs.state = 90;
+                    hs.waved = true;
+                    Sound.play('mew');
+                    spawnFloater({ kind: 'mrrp', x: hs.x + hs.w / 2, y: hs.y - 4, vy: -0.3, life: 40, maxLife: 40 });
+                    setTimeout(() => {
+                        if (room.treatsOffered >= 4) return;
+                        room.collectibles.push({
+                            kind: 'treat',
+                            x: hs.x - 18,
+                            y: hs.y + 2,
+                            collected: false,
+                            index: room.treatsOffered++
+                        });
+                    }, 600);
+                    k.busy = null;
                 }
             }
         }

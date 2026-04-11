@@ -9,6 +9,25 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v6 — Stardew-level visual polish plan + prior-art deepening
+
+**What changed**
+
+- New plan: `docs/plans/2026-04-11-002-feat-stardew-level-visual-polish-plan.md` proposing how to upgrade Tiny Kitty Garden from chunky procedural rectangles to a Stardew-adjacent top-down pixel-art game while keeping every existing constraint (single-file, no images, no engines, all-procedural Canvas + Web Audio).
+- The plan went through two deepening passes after the initial draft:
+  - First pass: cross-referenced against `/last30days` research across r/gamedev, r/IndieDev, r/proceduralgeneration, GitHub, and the open web. Surfaced industry-wide validation (SitePoint "Engine-Free Renaissance") and several concrete prior-art references (`Everrest`, `verdictzero/azet`, `mr1charles/Abil`, `Amalzybu/ecommerce`).
+  - Second pass: actually fetched the source code of the prior-art repos and extracted concrete API patterns to borrow verbatim — `class Entity` base class from Abil, `drawPixelArtWindow` API from azet, `generatePlaceholderPortrait` deterministic-HSL pattern from azet, ENDESGA-32 palette anchor from the pixel-art spec, plus `pingPong` animation flag, Bayer dithering, Wang autotile categorization, and the centralized `world.fx` screen-effects state pattern.
+- Plan now includes a "Concrete Patterns Borrowed From Prior Art" subsection with ~30 specific patterns each tied to a named PR or repo by URL.
+- Phase 3 Unit 12 (mouse personality + dialogue portraits) is the biggest beneficiary: the deterministic-HSL placeholder pattern *eliminates ~6 hand-authored NPC portrait sprites* and replaces them with a single ~50-line procedural function — biggest single time saving in the entire plan.
+
+**Why**
+
+The original plan was sound but argued from first principles. The deepening passes turned every "we'll figure it out in implementation" into "here's the API shape that already shipped in a 2026 single-file canvas game." Concrete prior art is much stronger than generic best practices: it shows the project's identity (single-file, no engines, all-procedural) is *not* eccentric — there's a recognizable category of single-file HTML5 game projects with active 2026 PRs, and the patterns we need are already battle-tested in them. The new "Concrete Patterns" section is the highest-leverage section of the plan because each pattern collapses an open question into a decision.
+
+The version bump to v6 keeps the per-push versioning convention from CLAUDE.md even though this commit is plan-only (no game code changes).
+
+---
+
 ## v5 — Add CHANGELOG.md and document the convention in CLAUDE.md (`fe83894`)
 
 **What changed**

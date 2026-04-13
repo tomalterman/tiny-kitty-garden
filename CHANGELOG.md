@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v7 — Phase 1 foundation: sprite renderer, animation, tile maps, lighting (`TBD`)
+## v7 — Phase 1 foundation: sprite renderer, animation, tile maps, lighting (`e7c5de1`)
 
 **What changed**
 

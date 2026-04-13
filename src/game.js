@@ -1707,8 +1707,8 @@ function updateKitten(dt) {
     }
     const dx = k.tx - k.x;
     const dy = k.ty - k.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 1.2) {
+    const dToTarget = Math.hypot(dx, dy);
+    if (dToTarget < 1.2) {
         k.x = k.tx; k.y = k.ty;
         k.tx = null; k.ty = null;
         playAnim(k, 'idleBreathe');
@@ -1716,9 +1716,9 @@ function updateKitten(dt) {
         return;
     }
     const step = k.speed * dt;
-    const mv = Math.min(step, dist);
-    k.x += (dx / dist) * mv;
-    k.y += (dy / dist) * mv;
+    const mv = Math.min(step, dToTarget);
+    k.x += (dx / dToTarget) * mv;
+    k.y += (dy / dToTarget) * mv;
     k.walkDist += mv;
 
     // Update facing

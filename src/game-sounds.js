@@ -90,6 +90,51 @@ const SOUNDS = {
         }
     },
 
+    // Ambient sounds (very quiet background layer)
+    ambBirdTweet: (S) => {
+        S.playTone(1200, 1600, 0.08, 'sine', 0.06);
+    },
+    ambDrip: (S) => {
+        S.playNoise(0.04, 400, 200);
+    },
+    ambTick: (S) => {
+        S.playTone(2000, 2000, 0.02, 'sine', 0.05);
+    },
+    ambGull: (S) => {
+        S.playTone(800, 600, 0.12, 'sine', 0.06);
+    },
+    ambWind: (S) => {
+        S.playNoise(0.3, 300, 100);
+    },
+
+    // Footstep sounds (quiet surface taps)
+    stepGrass: (S) => {
+        S.playNoise(0.03, 1200, 600);
+    },
+    stepWood: (S) => {
+        S.playTone(400, 400, 0.02, 'triangle', 0.08);
+    },
+    stepTile: (S) => {
+        S.playTone(800, 800, 0.015, 'square', 0.06);
+    },
+    stepSand: (S) => {
+        S.playNoise(0.04, 200, 100);
+    },
+    stepStone: (S) => {
+        S.playTone(600, 600, 0.025, 'triangle', 0.08);
+    },
+
+    // Additional reaction sounds
+    munch: (S) => {
+        S.playTone(300, 200, 0.06, 'triangle', 0.16);
+    },
+    yum: (S) => {
+        S.playTone(400, 600, 0.08, 'sine', 0.14);
+    },
+    stretch: (S) => {
+        S.playTone(300, 200, 0.12, 'sine', 0.10);
+    },
+
     // Full-shelf celebration
     celebrate: (S) => {
         const notes = [523, 659, 784, 1046, 1318];

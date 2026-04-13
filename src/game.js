@@ -1759,6 +1759,13 @@ function updateKitten(dt) {
             color: pawColor
         });
 
+        // Surface-appropriate footstep sound
+        if (surface === 'grass' || surface === 'dirt') Sound.play('stepGrass');
+        else if (surface === 'wood') Sound.play('stepWood');
+        else if (surface === 'tile' || surface === 'rug') Sound.play('stepTile');
+        else if (surface === 'sand') Sound.play('stepSand');
+        else if (surface === 'stone') Sound.play('stepStone');
+
         // Dust puffs on dirt/sand
         if (surface === 'dirt' || surface === 'sand') {
             if (!world.dustPuffs) world.dustPuffs = [];
@@ -2268,6 +2275,7 @@ function buildRooms() {
                         s.birdBaseY = PLAY_TOP + rand(15, 50);
                         s.birdY = s.birdBaseY;
                         s.birdActive = true;
+                        Sound.play('ambBirdTweet');
                     }
                 }
                 // Frog blink
@@ -2343,7 +2351,8 @@ function buildRooms() {
                 steamParticles: [],
                 steamTimer: rand(3, 5) * 60,
                 mousePeekTimer: rand(20, 40) * 60, mousePeekFrame: 0,
-                dustX: 200, dustY: PLAY_TOP + 10, dustTimer: 0
+                dustX: 200, dustY: PLAY_TOP + 10, dustTimer: 0,
+                tickCounter: 0
             },
             ambient: function(dt) {
                 const s = this.ambientState;
@@ -2385,9 +2394,16 @@ function buildRooms() {
                     s.dustTimer = rand(5, 8) * 60;
                     s.dustX = rand(180, 220);
                     s.dustY = PLAY_TOP + 10;
+                    Sound.play('ambDrip');
                 }
                 s.dustY += 0.15 * dt;
                 s.dustX += Math.sin(s.dustY * 0.08) * 0.1 * dt;
+                // Clock tick every ~3 seconds
+                s.tickCounter += dt;
+                if (s.tickCounter >= 180) {
+                    s.tickCounter = 0;
+                    Sound.play('ambTick');
+                }
             }
         },
         bedroom: {
@@ -2430,7 +2446,8 @@ function buildRooms() {
                     { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) }
                 ],
                 yarnWobbleTimer: rand(10, 15) * 60, yarnWobbleFrame: 0,
-                pillowTimer: rand(8, 12) * 60, pillowFrame: 0
+                pillowTimer: rand(8, 12) * 60, pillowFrame: 0,
+                tickCounter: 0
             },
             ambient: function(dt) {
                 const s = this.ambientState;
@@ -2460,6 +2477,12 @@ function buildRooms() {
                         s.pillowTimer = rand(8, 12) * 60;
                         s.pillowFrame = 10;
                     }
+                }
+                // Clock tick every ~4 seconds
+                s.tickCounter += dt;
+                if (s.tickCounter >= 240) {
+                    s.tickCounter = 0;
+                    Sound.play('ambTick');
                 }
             }
         },
@@ -2513,6 +2536,7 @@ function buildRooms() {
                         s.seabirdBaseY = PLAY_TOP + rand(10, 35);
                         s.seabirdY = s.seabirdBaseY;
                         s.seabirdActive = true;
+                        Sound.play('ambGull');
                     }
                 }
                 // Wave spray
@@ -3980,31 +4004,32 @@ function tryEdgeArrowTap(x, y) {
     const ly = (GAME.height + PLAY_TOP) / 2;
     if (y < ly - 18 || y > ly + 18) return false;
     if (x <= 20) {
-        startRoomTransition(-1);
+        startRoomTransition(-1, 'left');
         return true;
     }
     if (x >= GAME.width - 20) {
-        startRoomTransition(1);
+        startRoomTransition(1, 'right');
         return true;
     }
     return false;
 }
 
-function startRoomTransition(dir) {
+function startRoomTransition(dir, exitSide) {
     const idx = ROOM_ORDER.indexOf(world.room);
     const nextIdx = (idx + dir + ROOM_ORDER.length) % ROOM_ORDER.length;
+    const spawnSide = dir > 0 ? 'left' : 'right';
     world.transition = {
-        t: 0, duration: 24, phase: 'out',
         nextRoom: ROOM_ORDER[nextIdx],
-        spawnSide: dir > 0 ? 'left' : 'right'
+        spawnSide: spawnSide,
+        exitSide: exitSide,
+        phase: 'walkOff',
+        t: 0,
+        walkOffTarget: exitSide === 'right' ? GAME.width + 12 : -12,
+        walkInTarget: spawnSide === 'left' ? 30 : GAME.width - 30
     };
-    // Clear paw prints + floaters + particles + in-flight kitten target
+    // Cancel ongoing reactions and clear kitten target
     cancelReaction();
     world.dialogue = null;
-    world.pawPrints = [];
-    world.swayTiles = {};
-    world.dustPuffs = [];
-    world.waterRipples = [];
     world.kitten.tx = null;
     world.kitten.ty = null;
     world.kitten.busy = null;
@@ -4012,47 +4037,92 @@ function startRoomTransition(dir) {
 
 function updateTransition(dt) {
     const t = world.transition;
-    t.t += dt;
-    if (t.phase === 'out' && t.t >= t.duration) {
-        // Fast-forward any pending onArrive callbacks so in-flight
-        // collectibles still land on the shelf — otherwise a shelf slot
-        // can become permanently unreachable and block celebration.
-        flushFloatersOnArrive();
-        // Switch rooms
-        world.room = t.nextRoom;
-        const k = world.kitten;
-        if (t.spawnSide === 'left') {
-            k.x = 18;
-            k.facing = 'right';
+    const k = world.kitten;
+
+    if (t.phase === 'walkOff') {
+        // Walk kitten toward the exit edge
+        const target = t.walkOffTarget;
+        const dx = target - k.x;
+        if (Math.abs(dx) < 2) {
+            t.phase = 'fadeOut';
+            t.t = 0;
         } else {
-            k.x = GAME.width - 18;
-            k.facing = 'left';
+            k.x += Math.sign(dx) * k.speed * dt * 1.5;
+            k.facing = dx > 0 ? 'right' : 'left';
+            playAnim(k, 'walk' + _capFirst(k.facing));
+            updateAnim(k, dt);
         }
-        k.y = PLAY_TOP + (GAME.height - PLAY_TOP) / 2 + 20;
-        // Reset any butterflies that were riding the kitten in the old room
-        // so they don't teleport-collect on re-entry.
-        for (const r of Object.values(world.rooms)) {
-            for (const c of r.collectibles) {
-                if (c.kind === 'butterfly' && c.onKitten > 0) c.onKitten = 0;
+    } else if (t.phase === 'fadeOut') {
+        t.t += dt;
+        if (t.t >= 15) {
+            // Fast-forward any pending onArrive callbacks so in-flight
+            // collectibles still land on the shelf.
+            flushFloatersOnArrive();
+            // Switch rooms
+            world.room = t.nextRoom;
+            // Position kitten at entry edge (offscreen)
+            if (t.spawnSide === 'left') {
+                k.x = -12;
+                k.facing = 'right';
+            } else {
+                k.x = GAME.width + 12;
+                k.facing = 'left';
             }
+            k.y = PLAY_TOP + (GAME.height - PLAY_TOP) / 2 + 20;
+            // Reset any butterflies that were riding the kitten in the old room
+            for (const r of Object.values(world.rooms)) {
+                for (const c of r.collectibles) {
+                    if (c.kind === 'butterfly' && c.onKitten > 0) c.onKitten = 0;
+                }
+            }
+            // Re-arm the kitchen mouse wave on every re-entry
+            if (world.room === 'kitchen') {
+                const mouse = world.rooms.kitchen.hotspots.find(h => h.kind === 'mouse');
+                if (mouse) { mouse.waved = false; mouse.state = 0; }
+            }
+            // Clear environmental particles
+            world.pawPrints = [];
+            world.dustPuffs = [];
+            world.waterRipples = [];
+            world.swayTiles = {};
+            t.phase = 'fadeIn';
+            t.t = 0;
         }
-        // Re-arm the kitchen mouse wave on every re-entry
-        if (world.room === 'kitchen') {
-            const mouse = world.rooms.kitchen.hotspots.find(h => h.kind === 'mouse');
-            if (mouse) { mouse.waved = false; mouse.state = 0; }
+    } else if (t.phase === 'fadeIn') {
+        t.t += dt;
+        if (t.t >= 15) {
+            t.phase = 'walkIn';
+            t.t = 0;
         }
-        t.phase = 'in';
-        t.t = 0;
-    } else if (t.phase === 'in' && t.t >= t.duration) {
-        world.transition = null;
+    } else if (t.phase === 'walkIn') {
+        const target = t.walkInTarget;
+        const dx = target - k.x;
+        if (Math.abs(dx) < 2) {
+            k.x = target;
+            k.tx = null; k.ty = null;
+            playAnim(k, 'idleBreathe');
+            world.transition = null;
+        } else {
+            k.x += Math.sign(dx) * k.speed * dt * 1.5;
+            k.facing = dx > 0 ? 'right' : 'left';
+            playAnim(k, 'walk' + _capFirst(k.facing));
+            updateAnim(k, dt);
+        }
     }
 }
 
 function drawTransition(ctx) {
     const t = world.transition;
-    const a = t.phase === 'out' ? (t.t / t.duration) : (1 - t.t / t.duration);
-    ctx.fillStyle = `rgba(255,249,240,${a})`;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    if (t.phase === 'fadeOut') {
+        const a = t.t / 15; // 0 -> 1
+        ctx.fillStyle = `rgba(255,249,240,${a})`;
+        ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    } else if (t.phase === 'fadeIn') {
+        const a = 1 - t.t / 15; // 1 -> 0
+        ctx.fillStyle = `rgba(255,249,240,${a})`;
+        ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    }
+    // walkOff and walkIn phases: no overlay, kitten walks visibly
 }
 
 // ==================== WEATHER ====================

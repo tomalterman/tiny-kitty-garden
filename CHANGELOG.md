@@ -9,6 +9,22 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v10 — Layered ambient + reaction audio, smooth scene transitions (`TBD`)
+
+**What changed**
+
+- **Ambient sounds (Unit 13):** Added 5 ambient sound definitions (`ambBirdTweet`, `ambDrip`, `ambTick`, `ambGull`, `ambWind`) at very low volumes (0.04-0.08). Garden plays bird chirp when flyby activates. Kitchen plays drip when dust mote resets and clock tick every ~3 seconds. Bedroom plays clock tick every ~4 seconds. Beach plays seagull cry when seabird activates.
+- **Footstep sounds (Unit 13):** Added 5 surface-specific footstep sounds (`stepGrass`, `stepWood`, `stepTile`, `stepSand`, `stepStone`). Triggered in `updateKitten` at each paw-print spawn, surface-matched via `surfaceAt`.
+- **Reaction sounds (Unit 13):** Added `munch`, `yum`, and `stretch` sound definitions for use in multi-stage reaction beats.
+- **Smooth scene transitions (Unit 14):** Replaced the simple fade-out/fade-in transition with a 5-phase sequence: `walkOff` (kitten walks to exit edge) → `fadeOut` (0.25s cream overlay fade) → room swap → `fadeIn` (0.25s fade clear) → `walkIn` (kitten walks in from entry edge). The kitten is visible and animated during walk phases. Total transition time stays under 1.5 seconds. Input still blocked during all phases.
+- `startRoomTransition` now accepts an `exitSide` parameter from `tryEdgeArrowTap`. Environmental particles (paw prints, dust puffs, water ripples, sway tiles) are cleared at the swap point rather than at transition start, so they remain visible during the walk-off.
+
+**Why**
+
+The ambient audio layer makes each room feel alive even when the child isn't interacting — the kitchen ticks, the garden chirps, the beach calls. Footstep sounds ground the kitten in the world: you hear the surface change when she walks from grass to stone. The smooth transitions replace a jarring instant-swap with a cinematic walk-off/walk-in that reinforces the kitten-as-character design pillar — she doesn't teleport between rooms, she walks out one door and in through another. The walk phases reuse the existing animation system (`playAnim`/`updateAnim`), so no new rendering code was needed.
+
+---
+
 ## v9 — Phase 3 interaction richness: multi-stage reactions, secrets, world responses, mouse personality (`984a74b`)
 
 **What changed**

@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v9 — Phase 3 interaction richness: multi-stage reactions, secrets, world responses, mouse personality (`TBD`)
+## v9 — Phase 3 interaction richness: multi-stage reactions, secrets, world responses, mouse personality (`984a74b`)
 
 **What changed**
 

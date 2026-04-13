@@ -9,6 +9,27 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v7 — Phase 1 foundation: sprite renderer, animation, tile maps, lighting (`TBD`)
+
+**What changed**
+
+- Added `renderSprite(ctx, sprite, frameIdx, x, y, opts)` — a generic pixel-art sprite renderer that draws color-indexed grids with optional outline, shadow, and flash effects. Sprites are defined via `defineSprite(w, h, palette, framesAsStrings)` using readable ASCII-art strings.
+- Added a sprite registry (`SPRITES` map) with `getSprite(name)` fallback that generates deterministic HSL placeholder sprites for any unregistered name — the game never shows a missing-texture error.
+- Added a per-entity animation state machine: `playAnim(entity, name)`, `updateAnim(entity, dt)`, `getAnimSpriteFrame(entity)`. Supports looping, non-looping with `next` state transition, and `pingPong` mode. Animation declarations are data (`{ frames, frameMs, loop, pingPong, next }`).
+- Added a tile map renderer: `TILES` registry with `{ surface, draw(ctx, x, y, seed, neighbors) }`, `drawTileLayer(ctx, map, layerName)` for 3-layer maps (ground/decoration/overlay), deterministic per-cell `tileSeed()`, and `surfaceAt(map, px, py)` for surface-type lookups.
+- Added `drawLightingPass(ctx)` — a single `globalCompositeOperation = 'multiply'` full-screen tint that handles day/dusk/night × clear/rain/snow × indoor/outdoor combinations. Replaces the old inline `rgba(40,30,90,0.32)` night overlay.
+- Added `world.timeOfDay` (`day`/`dusk`/`night`) and `world.fx` (centralized screen-effects state). Bed-tap now triggers `day → dusk → night` with a smooth ~1-second fade instead of an instant flip.
+- Added shared math helpers: `TAU`, `clamp`, `dist`, `rand`, `randi`.
+- Kitten state extended with `animState`, `animFrame`, `animTimer`, `flash` fields for Phase 2 sprite conversion.
+
+**Why**
+
+These are the four foundation systems that every subsequent phase depends on. Without a data-driven sprite renderer, re-authoring the kitten as a multi-frame sprite (Phase 2) would mean hundreds more `fillRect` calls. Without a tile map system, converting rooms from hand-painted backgrounds to tile-based compositions would be impossible. Without a proper animation state machine, multi-stage reactions (Phase 3) would need ad-hoc frame-counting everywhere. And without a lighting pass that understands time-of-day + weather + indoor/outdoor, the visual polish would regress the existing night mode.
+
+The existing game is visually unchanged — all old rendering paths still run. Phase 2 will start replacing them one at a time.
+
+---
+
 ## v6 — Stardew-level visual polish plan + prior-art deepening (`b143afe`)
 
 **What changed**

@@ -165,7 +165,7 @@
 const GAME = {
     title: 'Tiny Kitty Garden',
     subtitle: '',
-    version: 'v6',
+    version: 'v7',
     bgColor: '#fff4c9',
 
     // Unused — kept for template compatibility.
@@ -1270,6 +1270,274 @@ const PAL = {
 const SHELF_H = 28;
 const PLAY_TOP = SHELF_H;
 
+// ==================== PHASE 1 FOUNDATION ====================
+
+// ---------- Shared math helpers ----------
+const TAU = Math.PI * 2;
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function dist(ax, ay, bx, by) { return Math.hypot(bx - ax, by - ay); }
+function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
+function randi(lo, hi) { return Math.floor(rand(lo, hi + 1)); }
+
+// ---------- Sprite renderer (Unit 1) ----------
+
+function defineSprite(w, h, palette, framesAsStrings) {
+    const frames = framesAsStrings.map(str => {
+        const rows = str.split('\n').filter(r => r.length > 0);
+        return rows.map(row => {
+            const cells = [];
+            for (let i = 0; i < w; i++) {
+                const ch = i < row.length ? row[i] : '.';
+                cells.push(ch === '.' ? 0 : parseInt(ch, 36));
+            }
+            return cells;
+        });
+    });
+    return { w, h, palette, frames };
+}
+
+const SPRITES = {};
+
+function getSprite(name) {
+    if (SPRITES[name]) return SPRITES[name];
+    if (!getSprite._placeholders) getSprite._placeholders = {};
+    if (!getSprite._placeholders[name]) {
+        getSprite._placeholders[name] = generatePlaceholderSprite(name);
+    }
+    return getSprite._placeholders[name];
+}
+
+function generatePlaceholderSprite(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+    const hue = ((hash & 0xFFFF) % 360);
+    const body = `hsl(${hue},60%,70%)`;
+    const dark = `hsl(${hue},50%,50%)`;
+    const pal = [null, body, dark];
+    const grid = [];
+    for (let r = 0; r < 8; r++) {
+        const row = [];
+        for (let c = 0; c < 8; c++) {
+            if (r === 0 || r === 7 || c === 0 || c === 7) row.push(2);
+            else row.push(1);
+        }
+        grid.push(row);
+    }
+    return { w: 8, h: 8, palette: pal, frames: [grid] };
+}
+
+function renderSprite(ctx, sprite, frameIdx, x, y, opts) {
+    const frame = sprite.frames[clamp(frameIdx, 0, sprite.frames.length - 1)];
+    const px = Math.round(x);
+    const py = Math.round(y);
+    const pal = sprite.palette;
+    const shadow = opts && opts.shadow;
+    const outline = opts && opts.outline;
+    const flashColor = opts && opts.flash;
+
+    if (shadow) {
+        const sx = px + (shadow.dx || 1);
+        const sy = py + (shadow.dy || 1);
+        ctx.fillStyle = shadow.color || PAL.shadow;
+        for (let r = 0; r < frame.length; r++) {
+            const row = frame[r];
+            for (let c = 0; c < row.length; c++) {
+                if (row[c] !== 0) ctx.fillRect(sx + c, sy + r, 1, 1);
+            }
+        }
+    }
+
+    if (outline) {
+        const oc = outline;
+        ctx.fillStyle = oc;
+        for (let r = 0; r < frame.length; r++) {
+            const row = frame[r];
+            for (let c = 0; c < row.length; c++) {
+                if (row[c] === 0) continue;
+                const hasEmpty = (r > 0 && frame[r - 1][c] === 0) ||
+                    (r < frame.length - 1 && frame[r + 1][c] === 0) ||
+                    (c > 0 && row[c - 1] === 0) ||
+                    (c < row.length - 1 && row[c + 1] === 0) ||
+                    r === 0 || r === frame.length - 1 || c === 0 || c === row.length - 1;
+                if (hasEmpty) {
+                    if (r > 0 && frame[r - 1][c] === 0) ctx.fillRect(px + c, py + r - 1, 1, 1);
+                    if (r < frame.length - 1 && frame[r + 1][c] === 0) ctx.fillRect(px + c, py + r + 1, 1, 1);
+                    if (c > 0 && row[c - 1] === 0) ctx.fillRect(px + c - 1, py + r, 1, 1);
+                    if (c < row.length - 1 && row[c + 1] === 0) ctx.fillRect(px + c + 1, py + r, 1, 1);
+                }
+            }
+        }
+    }
+
+    for (let r = 0; r < frame.length; r++) {
+        const row = frame[r];
+        for (let c = 0; c < row.length; c++) {
+            const idx = row[c];
+            if (idx === 0) continue;
+            ctx.fillStyle = flashColor || pal[idx] || '#ff00ff';
+            ctx.fillRect(px + c, py + r, 1, 1);
+        }
+    }
+}
+
+// ---------- Animation state machine (Unit 2) ----------
+
+function playAnim(entity, name) {
+    const registry = entity._animRegistry;
+    if (!registry || !registry[name]) {
+        if (registry && registry['idle']) name = 'idle';
+        else return;
+    }
+    if (entity.animState === name) return;
+    entity.animState = name;
+    entity.animFrame = 0;
+    entity.animTimer = registry[name].frameMs;
+    entity._animPingDir = 1;
+}
+
+function updateAnim(entity, dt) {
+    if (!entity.animState || !entity._animRegistry) return;
+    const anim = entity._animRegistry[entity.animState];
+    if (!anim || anim.frames.length <= 1) return;
+
+    // dt is in frame-units (1.0 = 16.67ms at 60fps)
+    entity.animTimer -= dt * 16.67;
+    if (entity.animTimer > 0) return;
+
+    entity.animTimer += anim.frameMs;
+
+    if (anim.pingPong) {
+        entity.animFrame += (entity._animPingDir || 1);
+        if (entity.animFrame >= anim.frames.length - 1) {
+            entity.animFrame = anim.frames.length - 1;
+            entity._animPingDir = -1;
+        } else if (entity.animFrame <= 0) {
+            entity.animFrame = 0;
+            entity._animPingDir = 1;
+        }
+    } else {
+        entity.animFrame++;
+        if (entity.animFrame >= anim.frames.length) {
+            if (anim.loop) {
+                entity.animFrame = 0;
+            } else {
+                entity.animFrame = anim.frames.length - 1;
+                if (anim.next) {
+                    playAnim(entity, anim.next);
+                }
+            }
+        }
+    }
+}
+
+function getAnimSpriteFrame(entity) {
+    if (!entity.animState || !entity._animRegistry) return 0;
+    const anim = entity._animRegistry[entity.animState];
+    if (!anim) return 0;
+    return anim.frames[clamp(entity.animFrame, 0, anim.frames.length - 1)];
+}
+
+// ---------- Tile map renderer (Unit 3) ----------
+
+const TILE_SIZE = 16;
+const MAP_COLS = 24;
+const MAP_ROWS = Math.ceil((216 - SHELF_H) / TILE_SIZE);
+
+const TILES = {};
+
+function tileSeed(col, row) {
+    return ((col * 73856093) ^ (row * 19349663)) >>> 0;
+}
+
+function drawTileLayer(ctx, map, layerName) {
+    const layer = map[layerName];
+    if (!layer) return;
+    for (let r = 0; r < layer.length; r++) {
+        const row = layer[r];
+        for (let c = 0; c < row.length; c++) {
+            const name = row[c];
+            if (!name) continue;
+            const tile = TILES[name];
+            if (!tile) {
+                if (!drawTileLayer._warned) drawTileLayer._warned = {};
+                if (!drawTileLayer._warned[name]) {
+                    console.warn('Unknown tile:', name);
+                    drawTileLayer._warned[name] = true;
+                }
+                continue;
+            }
+            const px = c * TILE_SIZE;
+            const py = PLAY_TOP + r * TILE_SIZE;
+            const neighbors = {
+                n: r > 0 ? layer[r - 1][c] : null,
+                s: r < layer.length - 1 ? layer[r + 1][c] : null,
+                e: c < row.length - 1 ? row[c + 1] : null,
+                w: c > 0 ? row[c - 1] : null
+            };
+            tile.draw(ctx, px, py, tileSeed(c, r), neighbors);
+        }
+    }
+}
+
+function tileAt(map, layerName, col, row) {
+    const layer = map[layerName];
+    if (!layer || !layer[row] || !layer[row][col]) return null;
+    return TILES[layer[row][col]] || null;
+}
+
+function surfaceAt(map, px, py) {
+    const col = Math.floor(px / TILE_SIZE);
+    const row = Math.floor((py - PLAY_TOP) / TILE_SIZE);
+    const tile = tileAt(map, 'ground', col, row);
+    return tile ? tile.surface : 'grass';
+}
+
+// ---------- Lighting / tinting layer (Unit 4) ----------
+
+function drawLightingPass(ctx) {
+    if (!world) return;
+    const room = currentRoom();
+    const indoor = room && room.indoor;
+    const tod = world.timeOfDay || 'day';
+    const weather = world.weather || 'clear';
+    const fade = (world.fx && world.fx.lightingFade) || 0;
+
+    let r = 0, g = 0, b = 0, a = 0;
+
+    if (tod === 'night') {
+        if (indoor) { r = 80; g = 60; b = 30; a = 0.18; }
+        else { r = 40; g = 30; b = 90; a = 0.35; }
+    } else if (tod === 'dusk') {
+        r = 200; g = 130; b = 120; a = 0.15;
+    } else {
+        if (indoor) { r = 255; g = 240; b = 200; a = 0.05; }
+    }
+
+    if (weather === 'rain' && !indoor) {
+        r = Math.round(r * 0.7 + 100 * 0.3);
+        g = Math.round(g * 0.7 + 140 * 0.3);
+        b = Math.round(b * 0.7 + 180 * 0.3);
+        a = Math.max(a, 0.10);
+    } else if (weather === 'snow' && !indoor) {
+        r = Math.round(r * 0.7 + 180 * 0.3);
+        g = Math.round(g * 0.7 + 190 * 0.3);
+        b = Math.round(b * 0.7 + 220 * 0.3);
+        a = Math.max(a, 0.08);
+    }
+
+    if (tod === 'dusk' && fade > 0 && fade < 1) a *= fade;
+    if (a <= 0) return;
+
+    ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
+    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+}
+
+// ---------- World effects state ----------
+
+function initWorldFx() {
+    return { shake: 0, lightingFade: 0, weatherFade: 0 };
+}
+
 // ---------- World state ----------
 let world = null;
 
@@ -1293,7 +1561,13 @@ function gameInit() {
             walkFrame: 0,
             walkDist: 0,
             busy: null,
-            purrTimer: 0
+            purrTimer: 0,
+            animState: null,
+            animFrame: 0,
+            animTimer: 0,
+            _animRegistry: null,
+            _animPingDir: 1,
+            flash: 0
         },
         pawPrints: [],
         floaters: [],
@@ -1309,6 +1583,8 @@ function gameInit() {
         weather: pickWeather(),
         weatherParticles: [],
         night: false,
+        timeOfDay: 'day',
+        fx: initWorldFx(),
         transition: null,
         celebrating: null,
         lullabyTimer: 120,
@@ -1341,8 +1617,10 @@ function gameUpdate(dt) {
     updatePawPrints(dt);
     updateWeather(dt);
     updateLullaby(dt);
+    updateDuskTransition(dt);
 
     if (world.kitten.purrTimer > 0) world.kitten.purrTimer -= dt;
+    if (world.kitten.flash > 0) world.kitten.flash -= dt * (1 / 60);
 }
 
 function gameRender(ctx, w, h) {
@@ -1374,12 +1652,11 @@ function gameRender(ctx, w, h) {
     // Weather (rain/snow) over world
     drawWeather(ctx);
 
-    // Night tint
-    if (world.night) {
-        ctx.fillStyle = 'rgba(40,30,90,0.32)';
-        ctx.fillRect(0, PLAY_TOP, w, h - PLAY_TOP);
-        drawMoon(ctx);
-    }
+    // Lighting pass (day/dusk/night + weather + indoor)
+    drawLightingPass(ctx);
+
+    // Moon icon at night
+    if (world.night) drawMoon(ctx);
 
     // Transition fade
     if (world.transition) drawTransition(ctx);
@@ -1979,7 +2256,9 @@ function resetShelfForNextRound() {
     }
     world.rooms = buildRooms();
     world.night = false;
-    // Keep weather for the session — feels continuous
+    world.timeOfDay = 'day';
+    world._duskTimer = null;
+    world.fx = initWorldFx();
 }
 
 // ==================== ROOM SYSTEM ====================
@@ -3233,11 +3512,24 @@ function drawWeather(ctx) {
 
 function toggleNight() {
     world.night = true;
+    world.timeOfDay = 'dusk';
+    world.fx.lightingFade = 0;
+    world._duskTimer = 60;
     Sound.play('twinkle');
-    // Reset star spawns
     for (const r of Object.values(world.rooms)) {
         r.starsSpawned = false;
         r.stars = [];
+    }
+}
+
+function updateDuskTransition(dt) {
+    if (!world._duskTimer) return;
+    world._duskTimer -= dt;
+    world.fx.lightingFade = clamp(1 - world._duskTimer / 60, 0, 1);
+    if (world._duskTimer <= 0) {
+        world._duskTimer = null;
+        world.timeOfDay = 'night';
+        world.fx.lightingFade = 0;
     }
 }
 

@@ -4,7 +4,7 @@
 const GAME = {
     title: 'Tiny Kitty Garden',
     subtitle: '',
-    version: 'v6',
+    version: 'v7',
     bgColor: '#fff4c9',
 
     // Unused — kept for template compatibility.

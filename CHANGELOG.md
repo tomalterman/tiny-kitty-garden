@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v8 — Phase 2 visual upgrade: sprite kitten, tile map rooms, ambient life (`TBD`)
+## v8 — Phase 2 visual upgrade: sprite kitten, tile map rooms, ambient life (`d547ad0`)
 
 **What changed**
 

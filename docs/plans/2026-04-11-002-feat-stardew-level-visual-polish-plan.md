@@ -993,17 +993,25 @@ Each phase is a complete, shippable improvement. The plan is graceful — any ph
 
 Lands the sprite renderer, tile map renderer, animation state machine, and lighting pass. No visible change yet for the player; the systems are in place but the existing rendering still drives the game. Ends with a clean smoke test, version bump, CHANGELOG entry, and a deployed build.
 
+**Browser verification (required before commit):** Open `dist/index.html` in a real browser via `agent-browser`. Verify: (1) title screen renders identically, (2) all four rooms load and display correctly via room transitions, (3) night mode triggers via bed-tap and the new `drawLightingPass` produces a visible indigo tint + moon on outdoor rooms, (4) no console errors. These are visual regression checks — the foundation systems must not change the game's appearance.
+
 ### Phase 2 — Visual upgrade (Units 5-8)
 
 Re-authors the kitten as a multi-frame sprite, converts all four rooms to tile maps, adds ambient world life. The player sees a substantially prettier and more alive game. Ends with a clean smoke test, browser playtest, version bump, CHANGELOG entry, and a deployed build.
+
+**Browser verification (required before commit):** Open `dist/index.html` via `agent-browser`. Verify: (1) the kitten's multi-frame walk animation cycles visibly in all 4 directions, (2) idle-breathe plays when the kitten stops, (3) each room's tile map renders with visible variety (no repetition seams), (4) tree foliage in the garden overlays the kitten when she walks behind it, (5) ambient life is visible — sit idle for 30 seconds in the garden and confirm at least 3 distinct ambient events (bird, fish jump, butterfly flap, flower sway), (6) all hotspots and collectibles still work, (7) room transitions are smooth, (8) night mode and weather render correctly over the new tile maps.
 
 ### Phase 3 — Interaction richness (Units 9-12)
 
 Multi-stage hotspot reactions, discoverable secrets, environmental responses to the kitten, mouse personality system. Every interaction now feels like a vignette. Ends with a clean smoke test, browser playtest, version bump, CHANGELOG entry, and a deployed build.
 
+**Browser verification (required before commit):** Open `dist/index.html` via `agent-browser`. Verify: (1) tapping the food bowl runs the full multi-stage reaction (sniff → eat → lick → sit) with visible animation beats, (2) tapping the bed runs the sleep sequence with Z floaters and triggers dusk→night, (3) tapping the kitten plays the purr loop with hearts, (4) at least one discoverable secret per room can be triggered (e.g., triple-tap a bush in the garden), (5) walking the kitten past flowers causes visible sway, (6) dust puffs appear on sand/dirt surfaces, (7) the mouse in the kitchen has a visible personality reaction (varies across sessions), (8) the dialogue portrait window appears during the mouse reaction, (9) interrupting a reaction by tapping elsewhere cancels cleanly.
+
 ### Phase 4 — Polish (Units 13-15)
 
 Layered audio, smoother transitions, performance pass, full playtest matrix, browser regression, CHANGELOG and version finalization. The game is shippable as a v9 (or whatever the version number ends up at) release.
+
+**Browser verification (required before commit):** Open `dist/index.html` via `agent-browser`. Full playtest matrix: (1) all four rooms reachable from all other rooms with walk-off/walk-in transitions, (2) every hotspot triggers its full reaction with correct sounds and animations, (3) every collectible category fillable, (4) night mode with smooth dusk→night lighting, (5) weather (rain/snow/clear) renders correctly in every room, (6) full-shelf celebration triggers and resets cleanly, (7) secrets discoverable in every room, (8) ambient + footstep + reaction audio plays and balances correctly, (9) FPS holds 55+ in worst-case scene (`?debug=fps`), (10) no console errors at any point.
 
 ## Sources & References
 

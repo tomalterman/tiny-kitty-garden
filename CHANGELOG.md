@@ -9,6 +9,23 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v9 — Phase 3 interaction richness: multi-stage reactions, secrets, world responses, mouse personality (`TBD`)
+
+**What changed**
+
+- **Multi-stage hotspot reactions (Unit 9):** Replaced all single-event hotspot reactions with a `REACTIONS` registry and stage-based state machine (`startReaction`, `reactionTick`, `cancelReaction`). Each hotspot now runs a multi-stage vignette: food bowl (sniff → eat with crumb beats → lick → sit), milk (sniff → lap with rhythmic sounds → lick), bed (step up → curl → sleep loop with Z floaters + night toggle → stretch → sit), pond/frog (lean in → frog hop + ribbit → watch), crab (cock head → scuttle → watch), waves (paw water → splash with spray + giggle → shake), mouse (wave → meow back → treat offer → retreat), self-pet (purr loop with hearts every 24 frames). Reactions can be interrupted by tapping elsewhere. Hard timeout at 8 seconds.
+- **Discoverable secrets (Unit 10):** Added 2 hidden tap-surprises per room (8 total). Each requires 3 taps within 1.5 seconds: garden (bush bird, rock snail), kitchen (tile spider, rug coin), bedroom (toy box teddy, window birds), beach (baby crab, pearl shell). Once found, re-triggerable on single tap. Taps below threshold fall through to normal walk.
+- **Environmental responses (Unit 11):** Paw prints now color-match the surface (grass=dark green, sand=sandy, wood=lavender, tile=nearly invisible). Walking on dirt/sand spawns dust puffs. Walking near the pond spawns water ripples. Flower decoration tiles sway 2px when the kitten walks past, decaying back smoothly.
+- **Mouse personality + portrait windows (Unit 12):** The kitchen mouse gets a random mood per session (shy/playful/sleepy) that varies its reaction — shy is brief and quick, playful has double waves and a star flourish, sleepy opens with a yawn. Added a generic `drawPortraitWindow` system with fade-in/out; the mouse portrait is procedural with mood-specific eyes. Portrait appears during mouse reaction beats. System is reusable for frog/crab in future.
+
+**Why**
+
+Phase 3 turns every interaction from a one-shot event into a little vignette the child can watch unfold. The reaction state machine is the load-bearing system — it replaces scattered `setTimeout` and `hs.state` timers with a declarative stage list that sets animations, spawns effects, and plays sounds at precise beats. The secrets reward curiosity without blocking normal play. The environmental responses make the kitten feel grounded in the world (her paw prints match the floor, flowers notice her). The mouse personality means repeat sessions feel different — the kitchen has character now, not just mechanics.
+
+Browser-verified: food bowl multi-stage reaction completes, bed triggers dusk→night, mouse reaction runs with mood-specific behavior, all reactions cancel cleanly on interrupt, no console errors.
+
+---
+
 ## v8 — Phase 2 visual upgrade: sprite kitten, tile map rooms, ambient life (`d547ad0`)
 
 **What changed**

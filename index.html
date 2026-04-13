@@ -165,7 +165,7 @@
 const GAME = {
     title: 'Tiny Kitty Garden',
     subtitle: '',
-    version: 'v8',
+    version: 'v9',
     bgColor: '#fff4c9',
 
     // Unused — kept for template compatibility.
@@ -1832,8 +1832,15 @@ function drawTileLayer(ctx, map, layerName) {
                 }
                 continue;
             }
-            const px = c * TILE_SIZE;
+            let px = c * TILE_SIZE;
             const py = PLAY_TOP + r * TILE_SIZE;
+            // Apply flower sway offset if active
+            if (world && world.swayTiles && layerName === 'decoration') {
+                const swayKey = c + ',' + r;
+                if (world.swayTiles[swayKey]) {
+                    px += world.swayTiles[swayKey];
+                }
+            }
             const neighbors = {
                 n: r > 0 ? layer[r - 1][c] : null,
                 s: r < layer.length - 1 ? layer[r + 1][c] : null,
@@ -2577,10 +2584,15 @@ function gameInit() {
         night: false,
         timeOfDay: 'day',
         fx: initWorldFx(),
+        reaction: null,
         transition: null,
         celebrating: null,
         lullabyTimer: 120,
-        sessionTick: 0
+        sessionTick: 0,
+        swayTiles: {},
+        dustPuffs: [],
+        waterRipples: [],
+        dialogue: null
     };
 
     seedWeather();
@@ -2601,7 +2613,9 @@ function gameUpdate(dt) {
     } else {
         updateKitten(dt);
         updateHotspots(dt);
+        reactionTick(dt);
         updateCollectibles(dt);
+        updateSecrets(dt);
         const room = currentRoom();
         if (room.ambient) room.ambient(dt);
         checkShelfFull();
@@ -2609,12 +2623,109 @@ function gameUpdate(dt) {
 
     updateFloaters(dt);
     updatePawPrints(dt);
+    updateDustPuffs(dt);
+    updateWaterRipples(dt);
+    updateSwayTiles(dt);
     updateWeather(dt);
     updateLullaby(dt);
     updateDuskTransition(dt);
 
     if (world.kitten.purrTimer > 0) world.kitten.purrTimer -= dt;
     if (world.kitten.flash > 0) world.kitten.flash -= dt * (1 / 60);
+}
+
+// ---------- Dialogue portrait window system ----------
+
+function drawPortraitWindow(ctx, x, y, w, h, bodyColor, outerColor, innerColor) {
+    bodyColor = bodyColor || PAL.cream;
+    outerColor = outerColor || '#e8d0d8';
+    innerColor = innerColor || PAL.outline;
+    // Outer border
+    ctx.fillStyle = outerColor;
+    ctx.fillRect(x, y, w, h);
+    // Inner border
+    ctx.fillStyle = innerColor;
+    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+    // Body fill
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+}
+
+function drawMousePortrait(ctx, x, y, mood) {
+    // Simple procedural mouse face inside portrait window
+    // Brown circle body
+    ctx.fillStyle = PAL.mouse;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 18, 10, 0, TAU);
+    ctx.fill();
+    // Ears
+    ctx.fillStyle = PAL.mouseDk;
+    ctx.beginPath();
+    ctx.arc(x + 9, y + 10, 5, 0, TAU);
+    ctx.arc(x + 23, y + 10, 5, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = PAL.pink;
+    ctx.beginPath();
+    ctx.arc(x + 9, y + 10, 3, 0, TAU);
+    ctx.arc(x + 23, y + 10, 3, 0, TAU);
+    ctx.fill();
+    // Eyes - vary by mood
+    ctx.fillStyle = PAL.eye;
+    if (mood === 'sleepy') {
+        // Half-closed eyes
+        ctx.fillRect(x + 11, y + 17, 3, 1);
+        ctx.fillRect(x + 19, y + 17, 3, 1);
+    } else if (mood === 'playful') {
+        // Wide sparkly eyes
+        ctx.fillRect(x + 12, y + 16, 2, 2);
+        ctx.fillRect(x + 20, y + 16, 2, 2);
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(x + 12, y + 16, 1, 1);
+        ctx.fillRect(x + 20, y + 16, 1, 1);
+    } else {
+        // Shy - small dots
+        ctx.fillRect(x + 12, y + 17, 1, 1);
+        ctx.fillRect(x + 20, y + 17, 1, 1);
+    }
+    // Nose
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(x + 15, y + 20, 2, 1);
+    // Whiskers
+    ctx.fillStyle = PAL.mouseDk;
+    ctx.fillRect(x + 7, y + 19, 4, 1);
+    ctx.fillRect(x + 22, y + 19, 4, 1);
+}
+
+function drawDialogue(ctx) {
+    const d = world.dialogue;
+    if (!d || !d.active) return;
+
+    d.timer += 1;
+
+    // Calculate alpha: fade in over 10 frames, fade out over 10 frames
+    let alpha;
+    if (d.fade === 1) {
+        // Fading out
+        d.fadeOutTimer = (d.fadeOutTimer || 0) + 1;
+        alpha = clamp(1 - d.fadeOutTimer / 10, 0, 1);
+        if (alpha <= 0) {
+            world.dialogue = null;
+            return;
+        }
+    } else {
+        // Fading in
+        alpha = clamp(d.timer / 10, 0, 1);
+    }
+
+    const pw = 40, ph = 40;
+    const px = d.side === 'right' ? GAME.width - pw - 10 : 10;
+    const py = PLAY_TOP + 8;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawPortraitWindow(ctx, px, py, pw, ph);
+    drawMousePortrait(ctx, px + 4, py + 4, d.mood);
+    ctx.restore();
 }
 
 function gameRender(ctx, w, h) {
@@ -2630,6 +2741,10 @@ function gameRender(ctx, w, h) {
     // Hotspots drawn inside room logic where needed, but dynamic layers go here
     drawHotspots(ctx, room);
     drawCollectibles(ctx, room);
+
+    // Dust puffs and water ripples under kitten
+    drawDustPuffs(ctx);
+    drawWaterRipples(ctx);
 
     // Paw prints under kitten
     drawPawPrints(ctx);
@@ -2655,6 +2770,11 @@ function gameRender(ctx, w, h) {
 
     // Moon icon at night
     if (world.night) drawMoon(ctx);
+
+    // Dialogue portrait window
+    if (world.dialogue && world.dialogue.active) {
+        drawDialogue(ctx);
+    }
 
     // Transition fade
     if (world.transition) drawTransition(ctx);
@@ -2768,8 +2888,12 @@ function gameTap(x, y) {
     // 4. Hotspots
     if (tryHotspotTap(x, y)) return;
 
+    // 4.5. Secrets
+    if (trySecretTap(x, y)) return;
+
     // 5. Walk target — plain walk, not a hotspot queue
     if (y < PLAY_TOP + 6) return; // don't walk into shelf
+    cancelReaction();
     setKittenTarget(x, y);
     // Any previously-queued hotspot walk is now stale.
     const room = currentRoom();
@@ -2832,13 +2956,86 @@ function updateKitten(dt) {
         k.walkFrame = 1 - k.walkFrame;
         k.walkDist = 0;
 
+        // Surface-aware paw print color
+        const room = currentRoom();
+        const surface = room.map ? surfaceAt(room.map, k.x, k.y) : 'grass';
+        let pawColor = PAL.outline;
+        if (surface === 'grass') pawColor = PAL.grassDk;
+        else if (surface === 'sand') pawColor = PAL.sandDk;
+        else if (surface === 'wood') pawColor = PAL.lavDk;
+        else if (surface === 'tile') pawColor = 'rgba(0,0,0,0.08)';
+        else if (surface === 'rug') pawColor = PAL.pinkDk;
+        else if (surface === 'water') pawColor = PAL.seaDk;
+        else if (surface === 'stone') pawColor = PAL.stone;
+        else if (surface === 'dirt') pawColor = PAL.woodDk;
+
         // Paw print trail
         world.pawPrints.push({
             x: k.x + (Math.random() - 0.5) * 4,
             y: k.y + 6 + (Math.random() - 0.5) * 2,
             life: 90,
-            maxLife: 90
+            maxLife: 90,
+            color: pawColor
         });
+
+        // Dust puffs on dirt/sand
+        if (surface === 'dirt' || surface === 'sand') {
+            if (!world.dustPuffs) world.dustPuffs = [];
+            if (world.dustPuffs.length < 10) {
+                world.dustPuffs.push({
+                    x: k.x + (Math.random() - 0.5) * 6,
+                    y: k.y + 4,
+                    vy: -0.15 - Math.random() * 0.1,
+                    life: 25,
+                    maxLife: 25,
+                    color: surface === 'sand' ? PAL.sandDk : PAL.woodDk
+                });
+            }
+        }
+
+        // Water ripples near pond (garden only)
+        if (world.room === 'garden') {
+            const pondCX = 110, pondCY = 164;
+            if (dist(k.x, k.y, pondCX, pondCY) < 35) {
+                if (!world.waterRipples) world.waterRipples = [];
+                if (Math.random() < 0.3 && world.waterRipples.length < 3) {
+                    world.waterRipples.push({
+                        x: 80 + Math.random() * 60,
+                        y: 150 + Math.random() * 28,
+                        r: 0, maxR: 8,
+                        life: 40, maxLife: 40
+                    });
+                }
+            }
+        }
+    }
+
+    // Flower sway — check 3×3 tile neighborhood around kitten for flower decorations
+    {
+        const room = currentRoom();
+        if (room.map && room.map.decoration) {
+            const col = Math.floor(k.x / TILE_SIZE);
+            const row = Math.floor((k.y - PLAY_TOP) / TILE_SIZE);
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const r2 = row + dr, c2 = col + dc;
+                    if (r2 < 0 || c2 < 0) continue;
+                    const deco = room.map.decoration;
+                    if (!deco[r2] || !deco[r2][c2]) continue;
+                    const name = deco[r2][c2];
+                    if (name === 'flW' || name === 'flP' || name === 'flY') {
+                        const tilePx = c2 * TILE_SIZE + TILE_SIZE / 2;
+                        const tilePy = PLAY_TOP + r2 * TILE_SIZE + TILE_SIZE / 2;
+                        if (dist(k.x, k.y, tilePx, tilePy) < 20) {
+                            const key = c2 + ',' + r2;
+                            // Sway direction based on kitten approach
+                            const swayDir = k.x < tilePx ? 2 : -2;
+                            world.swayTiles[key] = swayDir;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Clamp to play area
@@ -2873,17 +3070,8 @@ function kittenHitTest(x, y) {
 }
 
 function purrKitten() {
-    const k = world.kitten;
-    k.purrTimer = 40;
-    spawnFloater({
-        kind: 'heart',
-        x: k.x,
-        y: k.y - KITTEN_H,
-        vy: -0.5,
-        life: 60,
-        maxLife: 60
-    });
-    Sound.play('prrr');
+    world.kitten.purrTimer = 40;
+    startReaction('selfPet');
 }
 
 function drawKitten(ctx) {
@@ -2955,12 +3143,77 @@ function updatePawPrints(dt) {
 function drawPawPrints(ctx) {
     for (const p of world.pawPrints) {
         ctx.globalAlpha = Math.max(0, p.life / p.maxLife) * 0.5;
-        ctx.fillStyle = PAL.outline;
+        ctx.fillStyle = p.color || PAL.outline;
         ctx.fillRect(Math.round(p.x - 1), Math.round(p.y), 1, 1);
         ctx.fillRect(Math.round(p.x + 1), Math.round(p.y), 1, 1);
         ctx.fillRect(Math.round(p.x), Math.round(p.y + 1), 1, 1);
     }
     ctx.globalAlpha = 1;
+}
+
+// ==================== DUST PUFFS ====================
+
+function updateDustPuffs(dt) {
+    if (!world.dustPuffs) return;
+    for (let i = world.dustPuffs.length - 1; i >= 0; i--) {
+        const p = world.dustPuffs[i];
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) world.dustPuffs.splice(i, 1);
+    }
+}
+
+function drawDustPuffs(ctx) {
+    if (!world.dustPuffs) return;
+    for (const p of world.dustPuffs) {
+        const alpha = Math.max(0, p.life / p.maxLife) * 0.4;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+    }
+    ctx.globalAlpha = 1;
+}
+
+// ==================== WATER RIPPLES ====================
+
+function updateWaterRipples(dt) {
+    if (!world.waterRipples) return;
+    for (let i = world.waterRipples.length - 1; i >= 0; i--) {
+        const r = world.waterRipples[i];
+        r.life -= dt;
+        r.r = r.maxR * (1 - r.life / r.maxLife);
+        if (r.life <= 0) world.waterRipples.splice(i, 1);
+    }
+}
+
+function drawWaterRipples(ctx) {
+    if (!world.waterRipples) return;
+    for (const r of world.waterRipples) {
+        const alpha = Math.max(0, r.life / r.maxLife) * 0.35;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = PAL.white;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(Math.round(r.x), Math.round(r.y), r.r, 0, TAU);
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+}
+
+// ==================== SWAY TILES ====================
+
+function updateSwayTiles(dt) {
+    if (!world.swayTiles) return;
+    const keys = Object.keys(world.swayTiles);
+    for (const key of keys) {
+        const val = world.swayTiles[key];
+        // Decay toward 0
+        if (Math.abs(val) < 0.1) {
+            delete world.swayTiles[key];
+        } else {
+            world.swayTiles[key] = val * (1 - 0.06 * dt);
+        }
+    }
 }
 
 // ==================== FLOATERS ====================
@@ -3202,6 +3455,23 @@ function buildRooms() {
                 fishTimer: rand(8, 15) * 60, fishActive: false, fishX: 0, fishY: 0, fishArcT: 0,
                 fishSplash: []
             },
+            secrets: [
+                { x: 110, y: 52, w: 20, h: 20, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'bushBird',
+                    reaction: () => {
+                        Sound.play('twinkle');
+                        for (let i = 0; i < 3; i++) {
+                            spawnFloater({ kind: 'crumb', x: 115 + i*3, y: 52, vy: -0.8 - i*0.2, vx: 0.3 + i*0.1, life: 50, maxLife: 50 });
+                        }
+                    }
+                },
+                { x: 195, y: 42, w: 16, h: 16, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'rockSnail',
+                    reaction: () => {
+                        Sound.play('mew');
+                        spawnFloater({ kind: 'crumb', x: 200, y: 48, vy: -0.2, vx: 0, life: 60, maxLife: 60 });
+                        spawnFloater({ kind: 'heart', x: 200, y: 42, vy: -0.5, life: 40, maxLife: 40 });
+                    }
+                }
+            ],
             ambient: function(dt) {
                 const s = this.ambientState;
                 // Bird flyby
@@ -3272,6 +3542,22 @@ function buildRooms() {
             starsSpawned: false,
             stars: [],
             treatsOffered: 0,
+            mouseMood: ['shy', 'playful', 'sleepy'][Math.floor(Math.random() * 3)],
+            secrets: [
+                { x: 180, y: 100, w: 16, h: 16, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'tileSpider',
+                    reaction: () => {
+                        Sound.play('mew');
+                        spawnFloater({ kind: 'crumb', x: 188, y: 90, vy: 0.5, vx: 0, life: 50, maxLife: 50 });
+                        spawnFloater({ kind: 'mrrp', x: 188, y: 85, vy: -0.3, life: 30, maxLife: 30 });
+                    }
+                },
+                { x: 85, y: 170, w: 20, h: 10, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'rugCoin',
+                    reaction: () => {
+                        Sound.play('twinkle');
+                        spawnFloater({ kind: 'star', x: 95, y: 168, vy: -0.6, life: 50, maxLife: 50 });
+                    }
+                }
+            ],
             ambientState: {
                 steamParticles: [],
                 steamTimer: rand(3, 5) * 60,
@@ -3338,6 +3624,23 @@ function buildRooms() {
             toyBoxFill: 0,
             starsSpawned: false,
             stars: [],
+            secrets: [
+                { x: 22, y: 42, w: 24, h: 24, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'toyBoxTeddy',
+                    reaction: () => {
+                        Sound.play('mew');
+                        spawnFloater({ kind: 'heart', x: 34, y: 40, vy: -0.5, life: 50, maxLife: 50 });
+                        spawnFloater({ kind: 'mrrp', x: 34, y: 36, vy: -0.3, life: 40, maxLife: 40 });
+                    }
+                },
+                { x: 300, y: 32, w: 40, h: 20, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'windowBirds',
+                    reaction: () => {
+                        Sound.play('twinkle');
+                        for (let i = 0; i < 4; i++) {
+                            spawnFloater({ kind: 'crumb', x: 300 + i*8, y: 36 + i*2, vx: 1.0, vy: -0.1, life: 60, maxLife: 60 });
+                        }
+                    }
+                }
+            ],
             ambientState: {
                 cozyMotes: [
                     { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) },
@@ -3393,6 +3696,22 @@ function buildRooms() {
             yarnBall: { x: 150, y: 180, collected: false },
             starsSpawned: false,
             stars: [],
+            secrets: [
+                { x: 140, y: 160, w: 16, h: 16, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'sandBabyCrab',
+                    reaction: () => {
+                        Sound.play('mew');
+                        spawnFloater({ kind: 'heart', x: 148, y: 155, vy: -0.5, life: 50, maxLife: 50 });
+                        spawnFloater({ kind: 'mrrp', x: 148, y: 150, vy: -0.3, life: 30, maxLife: 30 });
+                    }
+                },
+                { x: 275, y: 104, w: 16, h: 16, requiredTaps: 3, tapCount: 0, tapTimer: 0, found: false, kind: 'pearlShell',
+                    reaction: () => {
+                        Sound.play('twinkle');
+                        spawnFloater({ kind: 'star', x: 283, y: 100, vy: -0.5, life: 50, maxLife: 50 });
+                        spawnFloater({ kind: 'heart', x: 280, y: 96, vy: -0.6, life: 40, maxLife: 40 });
+                    }
+                }
+            ],
             ambientState: {
                 seabirdX: -20, seabirdY: 0, seabirdBaseY: 0, seabirdTimer: rand(15, 25) * 60, seabirdActive: false,
                 sprayParticles: [], sprayTimer: rand(4, 8) * 60,
@@ -3822,6 +4141,361 @@ function drawKittenPortrait(ctx, x, y) {
     renderSprite(ctx, SPRITES.kitten, 0, x + 2, y + 2, {});
 }
 
+// ==================== REACTION STATE MACHINE ====================
+
+const REACTIONS = {
+    food: { stages: [
+        { name: 'sniff', duration: 24,
+          onEnter() { playAnim(world.kitten, 'eat'); } },
+        { name: 'eat', duration: 72,
+          onEnter() { playAnim(world.kitten, 'eat'); },
+          beats: [
+            { at: 6, do() { Sound.play('eat'); } },
+            { at: 12, do() {
+                const hs = currentRoom().hotspots.find(h => h.kind === 'food');
+                if (!hs) return;
+                for (let i = 0; i < 5; i++) {
+                    spawnFloater({
+                        kind: 'crumb',
+                        x: hs.x + hs.w / 2 + (Math.random() - 0.5) * 10,
+                        y: hs.y - 2,
+                        vy: -0.6 - Math.random() * 0.4,
+                        vx: (Math.random() - 0.5) * 0.4,
+                        life: 30, maxLife: 30
+                    });
+                }
+            }},
+            { at: 36, do() { Sound.play('eat'); } }
+          ] },
+        { name: 'lickLips', duration: 36,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } },
+        { name: 'sit', duration: 90,
+          onEnter() { playAnim(world.kitten, 'sit'); } }
+    ]},
+
+    milk: { stages: [
+        { name: 'sniff', duration: 18,
+          onEnter() { playAnim(world.kitten, 'eat'); } },
+        { name: 'lap', duration: 108,
+          onEnter() { playAnim(world.kitten, 'eat'); },
+          beats: [
+            { at: 6,  do() { Sound.play('lap'); } },
+            { at: 30, do() { Sound.play('lap'); } },
+            { at: 54, do() { Sound.play('lap'); } },
+            { at: 78, do() { Sound.play('lap'); } }
+          ] },
+        { name: 'lick', duration: 36,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } }
+    ]},
+
+    bed: { stages: [
+        { name: 'stepUp', duration: 24,
+          onEnter() { playAnim(world.kitten, 'sit'); } },
+        { name: 'curl', duration: 36,
+          onEnter() { playAnim(world.kitten, 'sleepCurl'); Sound.play('mew'); } },
+        { name: 'sleep', duration: 180,
+          onEnter() { playAnim(world.kitten, 'sleepCurl'); },
+          beats: [
+            { at: 0, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'z', x: k.x + 4, y: k.y - KITTEN_H - 4, vy: -0.4, vx: 0.2, life: 50, maxLife: 50 });
+            }},
+            { at: 12, do() { if (!world.night) toggleNight(); } },
+            { at: 42, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'z', x: k.x + 4, y: k.y - KITTEN_H - 4, vy: -0.4, vx: 0.2, life: 50, maxLife: 50 });
+            }},
+            { at: 84, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'z', x: k.x + 4, y: k.y - KITTEN_H - 4, vy: -0.4, vx: 0.2, life: 50, maxLife: 50 });
+            }}
+          ] },
+        { name: 'stretch', duration: 48,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } },
+        { name: 'sit', duration: 36,
+          onEnter() { playAnim(world.kitten, 'sit'); } }
+    ]},
+
+    pond: { stages: [
+        { name: 'leanIn', duration: 18,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } },
+        { name: 'frogHop', duration: 12,
+          onEnter() {
+            const hs = currentRoom().hotspots.find(h => h.kind === 'pond');
+            if (hs) hs.state = 30;
+            Sound.play('ribbit');
+          } },
+        { name: 'watch', duration: 60,
+          onEnter() { playAnim(world.kitten, 'sit'); },
+          beats: [
+            { at: 12, do() { Sound.play('ribbit'); } },
+            { at: 30, do() { world.kitten.busy = null; } }
+          ] }
+    ]},
+
+    crab: { stages: [
+        { name: 'cockHead', duration: 18,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } },
+        { name: 'scuttle', duration: 60,
+          onEnter() {
+            const hs = currentRoom().hotspots.find(h => h.kind === 'crab');
+            if (hs) { hs.state = 60; hs.offset = 0; }
+            Sound.play('scuttle');
+          } },
+        { name: 'watch', duration: 30,
+          onEnter() {
+            playAnim(world.kitten, 'sit');
+            world.kitten.busy = null;
+          } }
+    ]},
+
+    waves: { stages: [
+        { name: 'paw', duration: 12,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } },
+        { name: 'splash', duration: 18,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); },
+          beats: [
+            { at: 0, do() {
+                Sound.play('waveBack');
+                const k = world.kitten;
+                for (let i = 0; i < 6; i++) {
+                    spawnFloater({
+                        kind: 'splash',
+                        x: k.x + (Math.random() - 0.5) * 12,
+                        y: k.y - 4,
+                        vy: -0.8 - Math.random() * 0.5,
+                        vx: (Math.random() - 0.5) * 1.0,
+                        life: 25, maxLife: 25
+                    });
+                }
+            }},
+            { at: 3, do() {
+                // extra splash floaters
+            }},
+            { at: 12, do() { Sound.play('giggle'); } },
+            { at: 15, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'mrrp', x: k.x, y: k.y - KITTEN_H - 2, vy: -0.3, life: 30, maxLife: 30 });
+            }}
+          ] },
+        { name: 'shake', duration: 24,
+          onEnter() { playAnim(world.kitten, 'idleBreathe'); } }
+    ]},
+
+    mouse: { build: () => {
+        const mood = world.rooms.kitchen.mouseMood;
+        const hs = () => currentRoom().hotspots.find(h => h.kind === 'mouse');
+
+        // Mood-dependent timing
+        const waveDur = mood === 'shy' ? 24 : mood === 'playful' ? 48 : 42;
+        const retreatDur = mood === 'shy' ? 18 : mood === 'playful' ? 36 : 30;
+        const treatDur = mood === 'playful' ? 36 : mood === 'sleepy' ? 30 : 36;
+
+        const stages = [];
+
+        // Sleepy: yawn stage first
+        if (mood === 'sleepy') {
+            stages.push({ name: 'yawn', duration: 24,
+                onEnter() {
+                    const m = hs();
+                    if (m) spawnFloater({ kind: 'z', x: m.x + 6, y: m.y - 6, vy: -0.3, vx: 0.1, life: 40, maxLife: 40 });
+                    playAnim(world.kitten, 'idleBreathe');
+                }
+            });
+        }
+
+        // Wave stage
+        const waveBeats = [];
+        if (mood === 'playful') {
+            // Two waves + extra floaters
+            waveBeats.push({ at: 12, do() {
+                const m = hs();
+                if (m) spawnFloater({ kind: 'mrrp', x: m.x + m.w / 2, y: m.y - 4, vy: -0.3, life: 30, maxLife: 30 });
+            }});
+            waveBeats.push({ at: 24, do() {
+                const m = hs();
+                if (m) {
+                    spawnFloater({ kind: 'heart', x: m.x + m.w / 2 + 4, y: m.y - 8, vy: -0.4, life: 30, maxLife: 30 });
+                    spawnFloater({ kind: 'heart', x: m.x + m.w / 2 - 4, y: m.y - 6, vy: -0.5, life: 30, maxLife: 30 });
+                }
+            }});
+            waveBeats.push({ at: 36, do() {
+                const m = hs();
+                if (m) spawnFloater({ kind: 'mrrp', x: m.x + m.w / 2, y: m.y - 4, vy: -0.3, life: 30, maxLife: 30 });
+            }});
+        } else if (mood === 'shy') {
+            // Fewer floaters
+            waveBeats.push({ at: 12, do() {
+                const m = hs();
+                if (m) spawnFloater({ kind: 'mrrp', x: m.x + m.w / 2, y: m.y - 4, vy: -0.2, life: 25, maxLife: 25 });
+            }});
+        }
+
+        stages.push({ name: 'wave', duration: waveDur,
+            onEnter() {
+                const m = hs();
+                if (m) { m.waved = true; m.state = waveDur + 60; }
+                Sound.play('mew');
+                if (m && mood !== 'shy') spawnFloater({ kind: 'mrrp', x: m.x + m.w / 2, y: m.y - 4, vy: -0.3, life: 40, maxLife: 40 });
+                playAnim(world.kitten, 'idleBreathe');
+                // Show portrait
+                world.dialogue = { active: true, mood: mood, side: 'right', fade: 0, timer: 0 };
+            },
+            beats: waveBeats
+        });
+
+        // Meow back
+        stages.push({ name: 'meowBack', duration: 24,
+            onEnter() { playAnim(world.kitten, 'idleBreathe'); }
+        });
+
+        // Offer treat
+        const treatBeats = [{ at: Math.floor(treatDur / 2), do() {
+            const room = currentRoom();
+            const m = room.hotspots.find(h => h.kind === 'mouse');
+            if (!m || room.treatsOffered >= 4) return;
+            room.collectibles.push({
+                kind: 'treat',
+                x: m.x - 18,
+                y: m.y + 2,
+                collected: false,
+                index: room.treatsOffered++
+            });
+            if (mood === 'playful') {
+                spawnFloater({ kind: 'star', x: m.x - 12, y: m.y - 4, vy: -0.5, life: 35, maxLife: 35 });
+            }
+        }}];
+
+        stages.push({ name: 'offerTreat', duration: treatDur,
+            onEnter() { playAnim(world.kitten, 'sit'); },
+            beats: treatBeats
+        });
+
+        // Retreat
+        const retreatBeats = [];
+        if (mood === 'playful') {
+            // Peek-back beat near end
+            retreatBeats.push({ at: Math.floor(retreatDur * 0.7), do() {
+                const m = hs();
+                if (m) spawnFloater({ kind: 'mrrp', x: m.x + m.w / 2, y: m.y - 2, vy: -0.2, life: 20, maxLife: 20 });
+            }});
+        }
+
+        stages.push({ name: 'retreat', duration: retreatDur,
+            onEnter() {
+                playAnim(world.kitten, 'idleBreathe');
+                world.kitten.busy = null;
+                // Start fading out portrait
+                if (world.dialogue) world.dialogue.fade = 1;
+            },
+            beats: retreatBeats
+        });
+
+        // Done stage — clear dialogue
+        stages.push({ name: 'done', duration: 12,
+            onEnter() {
+                world.dialogue = null;
+            }
+        });
+
+        return { stages };
+    }},
+
+    selfPet: { stages: [
+        { name: 'purr', duration: 120,
+          onEnter() {
+            playAnim(world.kitten, 'purr');
+            Sound.play('prrr');
+          },
+          beats: [
+            { at: 0,  do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'heart', x: k.x, y: k.y - KITTEN_H, vy: -0.5, life: 60, maxLife: 60 });
+            }},
+            { at: 24, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'heart', x: k.x, y: k.y - KITTEN_H, vy: -0.5, life: 60, maxLife: 60 });
+            }},
+            { at: 48, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'heart', x: k.x, y: k.y - KITTEN_H, vy: -0.5, life: 60, maxLife: 60 });
+            }},
+            { at: 72, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'heart', x: k.x, y: k.y - KITTEN_H, vy: -0.5, life: 60, maxLife: 60 });
+            }},
+            { at: 96, do() {
+                const k = world.kitten;
+                spawnFloater({ kind: 'heart', x: k.x, y: k.y - KITTEN_H, vy: -0.5, life: 60, maxLife: 60 });
+            }}
+          ] }
+    ]}
+};
+
+function startReaction(kind) {
+    let def = REACTIONS[kind];
+    if (!def) return;
+    if (def.build) def = def.build();
+    const k = world.kitten;
+    k.busy = kind;
+    world.reaction = {
+        stages: def.stages,
+        stageIdx: 0,
+        timer: 0,
+        beatIdx: 0,
+        hotspotKind: kind,
+        totalTime: 0
+    };
+    const stage = def.stages[0];
+    if (stage.onEnter) stage.onEnter();
+}
+
+function reactionTick(dt) {
+    const r = world.reaction;
+    if (!r) return;
+
+    r.timer += dt;
+    r.totalTime += dt;
+
+    // Hard timeout safety: 480 frames = 8 seconds
+    if (r.totalTime >= 480) {
+        cancelReaction();
+        return;
+    }
+
+    const stage = r.stages[r.stageIdx];
+
+    // Fire beats
+    if (stage.beats) {
+        while (r.beatIdx < stage.beats.length && r.timer >= stage.beats[r.beatIdx].at) {
+            stage.beats[r.beatIdx].do();
+            r.beatIdx++;
+        }
+    }
+
+    // Advance stage
+    if (stage.duration > 0 && r.timer >= stage.duration) {
+        r.stageIdx++;
+        if (r.stageIdx >= r.stages.length) {
+            // Reaction complete
+            world.kitten.busy = null;
+            world.reaction = null;
+            return;
+        }
+        r.timer = 0;
+        r.beatIdx = 0;
+        const next = r.stages[r.stageIdx];
+        if (next.onEnter) next.onEnter();
+    }
+}
+
+function cancelReaction() {
+    if (!world.reaction) return;
+    world.kitten.busy = null;
+    world.reaction = null;
+    playAnim(world.kitten, 'idleBreathe');
+}
+
 // ==================== HOTSPOTS ====================
 
 function tryHotspotTap(x, y) {
@@ -3833,6 +4507,42 @@ function tryHotspotTap(x, y) {
         }
     }
     return false;
+}
+
+function trySecretTap(x, y) {
+    const room = currentRoom();
+    if (!room.secrets) return false;
+    for (const s of room.secrets) {
+        if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) {
+            if (s.found) {
+                s.reaction();
+                return true;
+            }
+            s.tapCount++;
+            s.tapTimer = 90; // 1.5s window
+            if (s.tapCount >= s.requiredTaps) {
+                s.found = true;
+                s.reaction();
+                return true;
+            }
+            return false; // hit but threshold not met — fall through to walk
+        }
+    }
+    return false;
+}
+
+function updateSecrets(dt) {
+    const room = currentRoom();
+    if (!room.secrets) return;
+    for (const s of room.secrets) {
+        if (s.tapTimer > 0) {
+            s.tapTimer -= dt;
+            if (s.tapTimer <= 0) {
+                s.tapTimer = 0;
+                s.tapCount = 0;
+            }
+        }
+    }
 }
 
 function triggerHotspot(hs, room) {
@@ -3880,86 +4590,8 @@ function updateHotspots(dt) {
             const reach = Math.hypot(k.x - hs.queuedX, k.y - hs.queuedY);
             if (reach < 4) {
                 hs.queued = false;
-                hs.state = 50;
-                k.busy = hs.kind;
-
-                if (hs.kind === 'food') {
-                    Sound.play('eat');
-                    for (let i = 0; i < 5; i++) {
-                        spawnFloater({
-                            kind: 'crumb',
-                            x: hs.x + hs.w / 2 + (Math.random() - 0.5) * 10,
-                            y: hs.y - 2,
-                            vy: -0.6 - Math.random() * 0.4,
-                            vx: (Math.random() - 0.5) * 0.4,
-                            life: 30, maxLife: 30
-                        });
-                    }
-                } else if (hs.kind === 'milk') {
-                    Sound.play('lap');
-                } else if (hs.kind === 'bed') {
-                    // Sleep: Zs for the duration
-                    hs.state = 160;
-                    Sound.play('mew');
-                    for (let i = 0; i < 3; i++) {
-                        setTimeout(() => {
-                            spawnFloater({
-                                kind: 'z', x: k.x + 4, y: k.y - KITTEN_H - 4,
-                                vy: -0.4, vx: 0.2,
-                                life: 50, maxLife: 50
-                            });
-                        }, i * 400);
-                    }
-                    if (!world.night) toggleNight();
-                } else if (hs.kind === 'waves') {
-                    Sound.play('waveBack');
-                    for (let i = 0; i < 6; i++) {
-                        spawnFloater({
-                            kind: 'splash',
-                            x: k.x + (Math.random() - 0.5) * 12,
-                            y: k.y - 4,
-                            vy: -0.8 - Math.random() * 0.5,
-                            vx: (Math.random() - 0.5) * 1.0,
-                            life: 25, maxLife: 25
-                        });
-                    }
-                    spawnFloater({ kind: 'mrrp', x: k.x, y: k.y - KITTEN_H - 2, vy: -0.3, life: 30, maxLife: 30 });
-                    Sound.play('giggle');
-                } else if (hs.kind === 'pond') {
-                    // Frog hops out and ribbits — kitten is now standing next to the pond
-                    hs.state = 30;
-                    Sound.play('ribbit');
-                    k.busy = null; // pond reaction is brief; let kitten stay free
-                } else if (hs.kind === 'crab') {
-                    hs.state = 60;
-                    hs.offset = 0;
-                    Sound.play('scuttle');
-                    k.busy = null;
-                } else if (hs.kind === 'mouse') {
-                    // Mouse waves and then drops a treat
-                    hs.state = 90;
-                    hs.waved = true;
-                    Sound.play('mew');
-                    spawnFloater({ kind: 'mrrp', x: hs.x + hs.w / 2, y: hs.y - 4, vy: -0.3, life: 40, maxLife: 40 });
-                    setTimeout(() => {
-                        if (room.treatsOffered >= 4) return;
-                        room.collectibles.push({
-                            kind: 'treat',
-                            x: hs.x - 18,
-                            y: hs.y + 2,
-                            collected: false,
-                            index: room.treatsOffered++
-                        });
-                    }, 600);
-                    k.busy = null;
-                }
+                startReaction(hs.kind);
             }
-        }
-
-        // Hotspot-done
-        if (hs.state <= 0 && k.busy === hs.kind) {
-            k.busy = null;
-            hs.state = 0;
         }
     }
 
@@ -4577,8 +5209,13 @@ function startRoomTransition(dir) {
         nextRoom: ROOM_ORDER[nextIdx],
         spawnSide: dir > 0 ? 'left' : 'right'
     };
-    // Clear paw prints + floaters + in-flight kitten target
+    // Clear paw prints + floaters + particles + in-flight kitten target
+    cancelReaction();
+    world.dialogue = null;
     world.pawPrints = [];
+    world.swayTiles = {};
+    world.dustPuffs = [];
+    world.waterRipples = [];
     world.kitten.tx = null;
     world.kitten.ty = null;
     world.kitten.busy = null;

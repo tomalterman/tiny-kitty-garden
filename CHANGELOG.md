@@ -9,6 +9,27 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v8 — Phase 2 visual upgrade: sprite kitten, tile map rooms, ambient life (`TBD`)
+
+**What changed**
+
+- Replaced the old `drawKittenSprite` (50+ lines of manual `fillRect` calls) with a data-driven 24×24 multi-frame sprite. 22 unique frames covering: walkDown/Up/Right (3 each, walkLeft mirrored via flipX), idleBreathe, sit, sitTailTwitch, sleepCurl, eat, purr, and happyDance. All authored as ASCII art via `defineSprite` and rendered through `renderSprite`.
+- Wired the kitten into the Phase 1 animation state machine: `updateKitten` now calls `playAnim`/`updateAnim` based on movement state, and `drawKitten` uses `getAnimSpriteFrame` + `renderSprite`. Walk animation cycles visibly in all 4 directions, idle-breathe plays when stopped.
+- Added `flipX` support to `renderSprite` so walkLeft reuses walkRight frames without duplicating sprite data.
+- Converted all 4 rooms from hand-painted `fillRect` backgrounds to tile map declarations using the Phase 1 tile system. Registered ~30 tile types: grass variants (gA-gD), stone path, water, dirt, kitchen floor, rug, bedroom planks, carpet, sea, wet/dry sand, rock, decorative flowers, bush, mouse hole, and tree foliage overlay.
+- Each room now has a `map` property with 3-layer tile data (ground/decoration/overlay). Tree foliage in the garden draws OVER the kitten via the overlay layer.
+- Kitchen and bedroom get `indoor: true` for the lighting pass.
+- Added per-room ambient life (Unit 8): garden has bird flyby, frog blink, fish jump; kitchen has steam wisps, mouse peek, dust mote; bedroom has cozy floating particles, yarn wobble, pillow puff; beach has seabird, wave spray, sand puffs trailing the kitten.
+- All ambient effects use gentle motion (1-4px entities, 0.1-0.6 px/frame), randomized intervals, and capped particle arrays.
+
+**Why**
+
+This is where the game goes from "programmer art demo" to "a world that feels alive." The data-driven sprite replaces ~80 lines of imperative fillRect code with a ~600-line sprite data table that supports 22 animation frames — the trade-off is more data but the kitten now has smooth multi-frame walk cycles, idle breathing, and distinct poses for every interaction. The tile maps give each room visual density and variety that hand-painted fillRect backgrounds couldn't achieve (4 grass variants vs. one flat green). The ambient life means the world moves even when the child isn't tapping — birds fly, frogs blink, steam rises. Together these changes address the core Stardew-gap identified in the plan: density, life, and idle animation.
+
+Browser-verified: all 4 rooms render correctly, kitten walks and animates in all directions, night mode + weather work over the new tiles, hotspots and collectibles still function, no console errors.
+
+---
+
 ## v7 — Phase 1 foundation: sprite renderer, animation, tile maps, lighting (`e7c5de1`)
 
 **What changed**

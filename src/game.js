@@ -115,6 +115,10 @@ function renderSprite(ctx, sprite, frameIdx, x, y, opts) {
     const shadow = opts && opts.shadow;
     const outline = opts && opts.outline;
     const flashColor = opts && opts.flash;
+    const flipX = opts && opts.flipX;
+    const w = sprite.w;
+
+    function col(c) { return flipX ? w - 1 - c : c; }
 
     if (shadow) {
         const sx = px + (shadow.dx || 1);
@@ -123,14 +127,13 @@ function renderSprite(ctx, sprite, frameIdx, x, y, opts) {
         for (let r = 0; r < frame.length; r++) {
             const row = frame[r];
             for (let c = 0; c < row.length; c++) {
-                if (row[c] !== 0) ctx.fillRect(sx + c, sy + r, 1, 1);
+                if (row[c] !== 0) ctx.fillRect(sx + col(c), sy + r, 1, 1);
             }
         }
     }
 
     if (outline) {
-        const oc = outline;
-        ctx.fillStyle = oc;
+        ctx.fillStyle = outline;
         for (let r = 0; r < frame.length; r++) {
             const row = frame[r];
             for (let c = 0; c < row.length; c++) {
@@ -141,10 +144,10 @@ function renderSprite(ctx, sprite, frameIdx, x, y, opts) {
                     (c < row.length - 1 && row[c + 1] === 0) ||
                     r === 0 || r === frame.length - 1 || c === 0 || c === row.length - 1;
                 if (hasEmpty) {
-                    if (r > 0 && frame[r - 1][c] === 0) ctx.fillRect(px + c, py + r - 1, 1, 1);
-                    if (r < frame.length - 1 && frame[r + 1][c] === 0) ctx.fillRect(px + c, py + r + 1, 1, 1);
-                    if (c > 0 && row[c - 1] === 0) ctx.fillRect(px + c - 1, py + r, 1, 1);
-                    if (c < row.length - 1 && row[c + 1] === 0) ctx.fillRect(px + c + 1, py + r, 1, 1);
+                    if (r > 0 && frame[r - 1][c] === 0) ctx.fillRect(px + col(c), py + r - 1, 1, 1);
+                    if (r < frame.length - 1 && frame[r + 1][c] === 0) ctx.fillRect(px + col(c), py + r + 1, 1, 1);
+                    if (c > 0 && row[c - 1] === 0) ctx.fillRect(px + col(c) + (flipX ? 1 : -1), py + r, 1, 1);
+                    if (c < row.length - 1 && row[c + 1] === 0) ctx.fillRect(px + col(c) + (flipX ? -1 : 1), py + r, 1, 1);
                 }
             }
         }
@@ -156,7 +159,7 @@ function renderSprite(ctx, sprite, frameIdx, x, y, opts) {
             const idx = row[c];
             if (idx === 0) continue;
             ctx.fillStyle = flashColor || pal[idx] || '#ff00ff';
-            ctx.fillRect(px + c, py + r, 1, 1);
+            ctx.fillRect(px + col(c), py + r, 1, 1);
         }
     }
 }
@@ -225,6 +228,369 @@ const MAP_COLS = 24;
 const MAP_ROWS = Math.ceil((216 - SHELF_H) / TILE_SIZE);
 
 const TILES = {};
+
+// ---------- Garden tiles ----------
+TILES.gA = { surface: 'grass', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.gB = { surface: 'grass', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + (seed % 11) + 2, y + (seed % 7) + 4, 2, 1);
+}};
+TILES.gC = { surface: 'grass', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.mintDk;
+    ctx.fillRect(x + (seed % 10) + 3, y + (seed % 9) + 3, 2, 2);
+}};
+TILES.gD = { surface: 'grass', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+    const dx = x + (seed % 10) + 3, dy = y + (seed % 8) + 2;
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(dx, dy, 1, 1);
+    ctx.fillRect(dx + 1, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(dx, dy - 1, 1, 1);
+}};
+TILES.stA = { surface: 'stone', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(x + 3, y + 4, 10, 8);
+}};
+TILES.stB = { surface: 'stone', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(x + 2, y + 5, 12, 7);
+}};
+TILES.wA = { surface: 'water', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sea;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.wB = { surface: 'water', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sea;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.seaDk;
+    ctx.fillRect(x + 3, y + 8, 10, 2);
+}};
+TILES.dA = { surface: 'dirt', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x, y, 16, 16);
+}};
+
+// ---------- Kitchen tiles ----------
+TILES.kfA = { surface: 'tile', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.peach;
+    ctx.fillRect(x + 15, y, 1, 16);
+    ctx.fillRect(x, y + 15, 16, 1);
+}};
+TILES.kfB = { surface: 'tile', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.peach;
+    ctx.fillRect(x + 15, y, 1, 16);
+    ctx.fillRect(x, y + 15, 16, 1);
+    ctx.fillRect(x + 7, y + 7, 2, 2);
+}};
+TILES.kfC = { surface: 'tile', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.peach;
+    ctx.fillRect(x + 15, y, 1, 16);
+    ctx.fillRect(x, y + 15, 16, 1);
+    ctx.fillRect(x + 4, y + 4, 1, 1);
+}};
+TILES.rugA = { surface: 'rug', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.rugB = { surface: 'rug', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(x, y, 16, 2);
+    ctx.fillRect(x, y + 14, 16, 2);
+}};
+
+// ---------- Bedroom tiles ----------
+TILES.bpA = { surface: 'wood', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.lav;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.lavDk;
+    ctx.fillRect(x, y + 15, 16, 1);
+}};
+TILES.bpB = { surface: 'wood', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.lav;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.lavDk;
+    ctx.fillRect(x, y + 15, 16, 1);
+    ctx.fillRect(x + (seed % 12) + 2, y, 1, 16);
+}};
+TILES.bpC = { surface: 'wood', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.lav;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.lavDk;
+    ctx.fillRect(x, y + 15, 16, 1);
+    ctx.fillRect(x + (seed % 8) + 4, y + 3, 1, 10);
+}};
+TILES.carpA = { surface: 'rug', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.carpB = { surface: 'rug', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(x + 2, y + 2, 12, 12);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x + 4, y + 4, 8, 8);
+}};
+
+// ---------- Beach tiles ----------
+TILES.seaA = { surface: 'water', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sea;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.seaB = { surface: 'water', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sea;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.seaDk;
+    const dy = Math.sin((x + (typeof world !== 'undefined' ? world.sessionTick * 0.8 : 0)) * 0.1) * 2;
+    ctx.fillRect(x + 2, y + 12 + dy, 8, 2);
+}};
+TILES.wsA = { surface: 'sand', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.sA = { surface: 'sand', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x, y, 16, 16);
+}};
+TILES.sB = { surface: 'sand', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x + (seed % 12) + 2, y + (seed % 10) + 3, 1, 1);
+}};
+TILES.sC = { surface: 'sand', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x + (seed % 9) + 3, y + (seed % 7) + 4, 1, 1);
+    ctx.fillRect(x + ((seed >> 4) % 10) + 2, y + ((seed >> 4) % 8) + 3, 1, 1);
+}};
+TILES.rkA = { surface: 'stone', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(x + 1, y + 3, 14, 10);
+    ctx.fillStyle = PAL.outline;
+    ctx.fillRect(x + 1, y + 3, 14, 1);
+    ctx.fillRect(x + 1, y + 12, 14, 1);
+}};
+
+// ---------- Decoration tiles ----------
+TILES.flW = { surface: 'grass', draw(ctx, x, y, seed) {
+    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(dx, dy, 1, 1);
+    ctx.fillRect(dx + 1, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+}};
+TILES.flP = { surface: 'grass', draw(ctx, x, y, seed) {
+    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(dx, dy, 1, 1);
+    ctx.fillRect(dx + 1, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+}};
+TILES.flY = { surface: 'grass', draw(ctx, x, y, seed) {
+    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(dx, dy, 1, 1);
+    ctx.fillRect(dx + 1, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+}};
+TILES.bushS = { surface: 'grass', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.mintDp;
+    ctx.fillRect(x + 2, y + 4, 12, 8);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + 3, y + 5, 10, 6);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x + 6, y + 6, 1, 1);
+    ctx.fillRect(x + 10, y + 8, 1, 1);
+}};
+TILES.mholeA = { surface: 'tile', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.outline;
+    ctx.fillRect(x + 2, y + 4, 12, 8);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 3, y + 5, 10, 5);
+}};
+
+// ---------- Overlay tiles ----------
+TILES.treeFoliage = { surface: 'grass', draw(ctx, x, y) {
+    ctx.fillStyle = PAL.mintDp;
+    ctx.fillRect(x, y + 2, 16, 14);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + 1, y + 3, 14, 12);
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x + 2, y + 4, 10, 8);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 7, y + 7, 2, 2);
+}};
+
+// ==================== TILE MAPS ====================
+
+function makeLayer(fill) {
+    const layer = [];
+    for (let r = 0; r < MAP_ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < MAP_COLS; c++) row.push(fill);
+        layer.push(row);
+    }
+    return layer;
+}
+
+function buildGardenMap() {
+    // Ground: grass with variants
+    const ground = makeLayer(null);
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            const s = tileSeed(c, r);
+            const v = s % 10;
+            ground[r][c] = v < 4 ? 'gA' : v < 6 ? 'gB' : v < 8 ? 'gC' : 'gD';
+        }
+    }
+    // Stone path: arc through the middle (y ~ 110, cols 3-18)
+    // Row = (110 - PLAY_TOP) / 16 ~ 5, varying with sin
+    for (let i = 0; i < 6; i++) {
+        const sx = 60 + i * 50;
+        const sy = 110 + Math.sin(i * 0.7) * 12;
+        const col = Math.floor(sx / 16);
+        const row = Math.floor((sy - PLAY_TOP) / 16);
+        if (row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS) {
+            ground[row][col] = (tileSeed(col, row) % 2 === 0) ? 'stA' : 'stB';
+        }
+    }
+    // Water tiles for pond at (80, 150) w=60, h=28  -> cols 5-8, rows 7-9
+    const pondCols = [5, 6, 7, 8];
+    const pondRows = [7, 8];
+    for (const pr of pondRows) {
+        for (const pc of pondCols) {
+            if (pr < MAP_ROWS && pc < MAP_COLS) {
+                ground[pr][pc] = (tileSeed(pc, pr) % 2 === 0) ? 'wA' : 'wB';
+            }
+        }
+    }
+
+    // Decoration: scattered flowers
+    const deco = makeLayer(null);
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            const s = tileSeed(c + 100, r + 100);
+            if (s % 17 === 0) deco[r][c] = 'flW';
+            else if (s % 19 === 0) deco[r][c] = 'flP';
+            else if (s % 23 === 0) deco[r][c] = 'flY';
+        }
+    }
+    // Bushes at approximate positions: (110,60)->(6,2), (280,70)->(17,2), (60,200)->(3,10), (320,200)->(20,10)
+    const bushPositions = [[6, 2], [17, 2], [3, 10], [20, 10]];
+    for (const [bc, br] of bushPositions) {
+        if (br < MAP_ROWS && bc < MAP_COLS) deco[br][bc] = 'bushS';
+    }
+
+    // Overlay: tree foliage at tree positions (30,70)->(1,2), (350,80)->(21,3), (200,50)->(12,1)
+    const overlay = makeLayer(null);
+    const treePositions = [[1, 2], [21, 3], [12, 1]];
+    for (const [tc, tr] of treePositions) {
+        if (tr >= 0 && tr < MAP_ROWS && tc >= 0 && tc < MAP_COLS) {
+            overlay[tr][tc] = 'treeFoliage';
+            // Extend tree foliage to neighbor cell if possible
+            if (tc + 1 < MAP_COLS) overlay[tr][tc + 1] = 'treeFoliage';
+        }
+    }
+
+    return { ground, decoration: deco, overlay };
+}
+
+function buildKitchenMap() {
+    const ground = makeLayer(null);
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            const s = tileSeed(c, r);
+            ground[r][c] = s % 5 === 0 ? 'kfB' : s % 7 === 0 ? 'kfC' : 'kfA';
+        }
+    }
+    // Rug in center at (80,130)-(210,180) -> cols 5-13, rows 6-9
+    for (let r = 6; r <= 9; r++) {
+        for (let c = 5; c <= 13; c++) {
+            if (r < MAP_ROWS && c < MAP_COLS) {
+                ground[r][c] = (r === 6 || r === 9) ? 'rugB' : 'rugA';
+            }
+        }
+    }
+
+    const deco = makeLayer(null);
+    // Mouse hole at (330,175) -> col 20, row 9
+    if (9 < MAP_ROWS && 20 < MAP_COLS) deco[9][20] = 'mholeA';
+
+    return { ground, decoration: deco, overlay: makeLayer(null) };
+}
+
+function buildBedroomMap() {
+    const ground = makeLayer(null);
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            const s = tileSeed(c, r);
+            ground[r][c] = s % 4 === 0 ? 'bpB' : s % 6 === 0 ? 'bpC' : 'bpA';
+        }
+    }
+    // Carpet in center: oval rug at (160,130) radius ~50x22 -> cols 7-13, rows 6-8
+    for (let r = 6; r <= 8; r++) {
+        for (let c = 7; c <= 13; c++) {
+            if (r < MAP_ROWS && c < MAP_COLS) {
+                ground[r][c] = ((r === 6 || r === 8) && (c === 7 || c === 13)) ? 'carpA' : 'carpB';
+            }
+        }
+    }
+
+    return { ground, decoration: makeLayer(null), overlay: makeLayer(null) };
+}
+
+function buildBeachMap() {
+    const ground = makeLayer(null);
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            if (r < 3) {
+                // Sea: top 3 rows (48px = close to the 50px sea area)
+                ground[r][c] = (tileSeed(c, r) % 2 === 0) ? 'seaA' : 'seaB';
+            } else if (r === 3) {
+                // Wet sand transition
+                ground[r][c] = 'wsA';
+            } else {
+                // Dry sand
+                const s = tileSeed(c, r);
+                ground[r][c] = s % 5 === 0 ? 'sB' : s % 7 === 0 ? 'sC' : 'sA';
+            }
+        }
+    }
+    // Rock at (50,160) -> col 3, row 8
+    if (8 < MAP_ROWS && 3 < MAP_COLS) ground[8][3] = 'rkA';
+
+    return { ground, decoration: makeLayer(null), overlay: makeLayer(null) };
+}
 
 function tileSeed(col, row) {
     return ((col * 73856093) ^ (row * 19349663)) >>> 0;
@@ -319,6 +685,632 @@ function initWorldFx() {
     return { shake: 0, lightingFade: 0, weatherFade: 0 };
 }
 
+// ---------- Kitten sprite (Unit 5 — data-driven 24×24) ----------
+
+const KITTEN_PAL = [
+    null,           // 0 = transparent
+    PAL.cream,      // 1 = body
+    PAL.outline,    // 2 = dark brown outlines
+    PAL.pink,       // 3 = inner ear, blush
+    PAL.eye,        // 4 = dark eyes
+    '#fffdf7',      // 5 = highlight (top of head)
+    '#ede0d0',      // 6 = shadow (bottom)
+    PAL.pinkDk,     // 7 = nose, mouth
+];
+
+SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
+    // Frame 0: walkDown neutral (front view)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162......',
+        '....226112..2116262.....',
+        '.....262.....2622.......',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 1: walkDown left step
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '...226111166111162......',
+        '..226.112..2116262.....',
+        '..22...62.....2622.....',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 2: walkDown right step
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162.222..',
+        '....226112..211626.262.',
+        '.....262.....262..22...',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 3: walkUp neutral (back view)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251152.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162......',
+        '....226112..2116262.....',
+        '.....262.....2622.......',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 4: walkUp left step
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251152.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '...226111166111162......',
+        '..226.112..2116262.....',
+        '..22...62.....2622.....',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 5: walkUp right step
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251152.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..21111111111111112.....',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162.222..',
+        '....226112..211626.262.',
+        '.....262.....262..22...',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 6: walkRight neutral (side view, one eye)
+    [
+        '........................',
+        '.......22222............',
+        '......2555522...........',
+        '......251152222.........',
+        '.....2211111112.........',
+        '.....2111111112.........',
+        '.....2551114112.........',
+        '.....2111117112.........',
+        '.....2113117712.........',
+        '.....211112222..........',
+        '.....221111126..........',
+        '......222222262.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......261111622.......',
+        '.......261111622.......',
+        '.......2611116262.......',
+        '.......2261162.22.......',
+        '........262262..........',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 7: walkRight left step
+    [
+        '........................',
+        '.......22222............',
+        '......2555522...........',
+        '......251152222.........',
+        '.....2211111112.........',
+        '.....2111111112.........',
+        '.....2551114112.........',
+        '.....2111117112.........',
+        '.....2113117712.........',
+        '.....211112222..........',
+        '.....221111126..........',
+        '......222222262.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......261111622.......',
+        '.......261111622.......',
+        '......2261116262........',
+        '......226.162.22........',
+        '......22..262...........',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 8: walkRight right step
+    [
+        '........................',
+        '.......22222............',
+        '......2555522...........',
+        '......251152222.........',
+        '.....2211111112.........',
+        '.....2111111112.........',
+        '.....2551114112.........',
+        '.....2111117112.........',
+        '.....2113117712.........',
+        '.....211112222..........',
+        '.....221111126..........',
+        '......222222262.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......21111126.........',
+        '.......261111622.......',
+        '.......261111622.......',
+        '.......2611116262.22...',
+        '.......226116.2622.262.',
+        '........2622...22..22..',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 9: idleBreathe expanded (slightly puffed body)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '..222222222222222262....',
+        '...2111111111111126.....',
+        '...2111111111111126.....',
+        '...2111111111111126.....',
+        '...2111111111111126.....',
+        '...261111111111116262...',
+        '...261111111111116.22..',
+        '...2611116611111162.....',
+        '...2261112..21116262....',
+        '....262......2622.......',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 10: sit (legs tucked, tail wrapped)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....261111111111626.....',
+        '...226111111111162......',
+        '..2211166666611126......',
+        '..26111111111111262.....',
+        '..2222222222222222......',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 11: sitTailTwitch (tail shifted)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....261111111111626.....',
+        '...226111111111162......',
+        '..2211166666611126......',
+        '..2611111111111126222...',
+        '..22222222222222221.2...',
+        '.....................2..',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 12: sleepCurl (curled up ball)
+    [
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '.....22222222222........',
+        '....255511111112........',
+        '....211111111112........',
+        '....211441111112........',
+        '....2.2..2111112........',
+        '....2222211111126.......',
+        '...211111111111126......',
+        '...211111111111126......',
+        '...261111111111626......',
+        '..226111111111162.......',
+        '..221116666611126.......',
+        '..26111111111111262.....',
+        '..2222222222222222......',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 13: sleepCurl breathing (slightly expanded)
+    [
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '.....22222222222........',
+        '....255511111112........',
+        '....211111111112........',
+        '....211441111112........',
+        '....2.2..2111112........',
+        '....2222211111126.......',
+        '..2211111111111126......',
+        '..2111111111111126......',
+        '..2611111111111626......',
+        '..226111111111162.......',
+        '..221116666611126.......',
+        '..26111111111111262.....',
+        '..2222222222222222......',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 14: eat (head lowered, mouth near bowl)
+    [
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....261111111111626.....',
+        '....2261111111162.......',
+        '....226666666662........',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 15: eat (head lower, mouth open)
+    [
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....261111111111626.....',
+        '....2261111111162.......',
+        '....226666666662........',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 16: eat (head lowest, gulp)
+    [
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....261111111111626.....',
+        '....226666666662........',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 17: purr (eyes closed/happy, relaxed)
+    [
+        '........................',
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21122111111221112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162......',
+        '....226112..2116262.....',
+        '.....262.....2622.......',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 18: happyDance (bounce left)
+    [
+        '........................',
+        '...2222......2222.......',
+        '..255552....255552......',
+        '..251152....251132......',
+        '.22111122221111122......',
+        '.21111111111111112......',
+        '.25511111111111152......',
+        '.21144111111441112......',
+        '.21111111111111112......',
+        '.21131117711131112......',
+        '.2111122..221111126....',
+        '.22111111111111226......',
+        '..2222222222222262......',
+        '...211111111111126......',
+        '...211111111111126......',
+        '...211111111111126......',
+        '...211111111111126......',
+        '...2611111111116262.....',
+        '...2611111111116.22....',
+        '...26111166111162.......',
+        '...2261112..116262......',
+        '....262.....2622........',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 19: happyDance (bounce up)
+    [
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162......',
+        '....226112..2116262.....',
+        '.....262.....2622.......',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 20: happyDance (bounce right)
+    [
+        '........................',
+        '.....2222......2222.....',
+        '....255552....255552....',
+        '....251152....251132....',
+        '...22111122221111122....',
+        '...21111111111111112....',
+        '...25511111111111152....',
+        '...21144111111441112....',
+        '...21111111111111112....',
+        '...21131117711131112....',
+        '...2111122..221111126..',
+        '...22111111111111226....',
+        '....2222222222222262....',
+        '.....211111111111126....',
+        '.....211111111111126....',
+        '.....211111111111126....',
+        '.....211111111111126....',
+        '.....2611111111116262...',
+        '.....2611111111116.22..',
+        '.....26111166111162.....',
+        '.....2261112..116262....',
+        '......262.....2622......',
+        '........................',
+        '........................',
+    ].join('\n'),
+    // Frame 21: happyDance (bounce up again)
+    [
+        '....2222......2222......',
+        '...255552....255552.....',
+        '...251152....251132.....',
+        '..22111122221111122.....',
+        '..21111111111111112.....',
+        '..25511111111111152.....',
+        '..21144111111441112.....',
+        '..21111111111111112.....',
+        '..21131117711131112.....',
+        '..2111122..221111126...',
+        '..22111111111111226.....',
+        '...2222222222222262.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....211111111111126.....',
+        '....2611111111116262....',
+        '....2611111111116.22...',
+        '....26111166111162......',
+        '....226112..2116262.....',
+        '.....262.....2622.......',
+        '........................',
+        '........................',
+        '........................',
+    ].join('\n'),
+]);
+
+const KITTEN_ANIMS = {
+    walkDown:      { frames: [0, 1, 0, 2], frameMs: 110, loop: true },
+    walkUp:        { frames: [3, 4, 3, 5], frameMs: 110, loop: true },
+    walkRight:     { frames: [6, 7, 6, 8], frameMs: 110, loop: true },
+    walkLeft:      { frames: [6, 7, 6, 8], frameMs: 110, loop: true },  // rendered with flipX
+    idleBreathe:   { frames: [0, 9],       frameMs: 600, loop: true },
+    sit:           { frames: [10],         frameMs: 0,   loop: false, next: 'sitTailTwitch' },
+    sitTailTwitch: { frames: [10, 11],     frameMs: 700, loop: true },
+    sleepCurl:     { frames: [12, 13],     frameMs: 900, loop: true },
+    eat:           { frames: [14, 15, 14, 16], frameMs: 130, loop: false, next: 'idleBreathe' },
+    purr:          { frames: [0, 17],      frameMs: 350, loop: true },
+    happyDance:    { frames: [18, 19, 20, 21], frameMs: 130, loop: true },
+};
+
+function _capFirst(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
 // ---------- World state ----------
 let world = null;
 
@@ -391,6 +1383,8 @@ function gameUpdate(dt) {
         updateKitten(dt);
         updateHotspots(dt);
         updateCollectibles(dt);
+        const room = currentRoom();
+        if (room.ambient) room.ambient(dt);
         checkShelfFull();
     }
 
@@ -423,6 +1417,10 @@ function gameRender(ctx, w, h) {
 
     // Kitten
     drawKitten(ctx);
+
+    // Overlay tiles (tree foliage drawn over kitten)
+    const roomMap = currentRoom().map;
+    if (roomMap) drawTileLayer(ctx, roomMap, 'overlay');
 
     // Floaters over kitten
     drawFloaters(ctx);
@@ -513,7 +1511,12 @@ function gameTitleRender(ctx, w, h, time) {
     // Kitten in the middle of the card
     const kitX = w / 2 - 8;
     const kitY = cy + 34;
-    drawKittenSprite(ctx, kitX, kitY, 'down', Math.floor(time * 2) % 2, null);
+    // Animate between walkDown frames on title screen
+    const titleFrames = KITTEN_ANIMS.walkDown.frames;
+    const titleIdx = titleFrames[Math.floor(time * 2) % titleFrames.length];
+    renderSprite(ctx, SPRITES.kitten, titleIdx, kitX, kitY, {
+        shadow: { dx: 1, dy: 1, color: PAL.shadow }
+    });
 
     // Pulsing paw-print prompt (art, not text)
     const pulse = (Math.sin(time * 3) + 1) / 2;
@@ -556,22 +1559,36 @@ function gameTap(x, y) {
 
 // ==================== KITTEN ====================
 
-const KITTEN_W = 18;
-const KITTEN_H = 18;
+const KITTEN_W = 24;
+const KITTEN_H = 24;
 
 function updateKitten(dt) {
     const k = world.kitten;
 
-    // If kitten is mid-reaction for a hotspot, delegate to that hotspot's logic
-    if (k.busy) return;
+    // Ensure animation registry is wired up
+    if (!k._animRegistry) k._animRegistry = KITTEN_ANIMS;
 
-    if (k.tx == null) return;
+    // If kitten is mid-reaction for a hotspot, delegate to that hotspot's logic
+    if (k.busy) {
+        if (k.busy === 'dance') playAnim(k, 'happyDance');
+        updateAnim(k, dt);
+        return;
+    }
+
+    if (k.tx == null) {
+        // Idle — no walk target, not busy
+        playAnim(k, 'idleBreathe');
+        updateAnim(k, dt);
+        return;
+    }
     const dx = k.tx - k.x;
     const dy = k.ty - k.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 1.2) {
         k.x = k.tx; k.y = k.ty;
         k.tx = null; k.ty = null;
+        playAnim(k, 'idleBreathe');
+        updateAnim(k, dt);
         return;
     }
     const step = k.speed * dt;
@@ -587,7 +1604,11 @@ function updateKitten(dt) {
         k.facing = dy > 0 ? 'down' : 'up';
     }
 
-    // Advance walk frame every ~7 pixels
+    // Play walk animation matching facing direction
+    playAnim(k, 'walk' + _capFirst(k.facing));
+    updateAnim(k, dt);
+
+    // Advance walk frame every ~7 pixels (legacy counter kept for paw prints)
     if (k.walkDist > 7) {
         k.walkFrame = 1 - k.walkFrame;
         k.walkDist = 0;
@@ -648,15 +1669,45 @@ function purrKitten() {
 
 function drawKitten(ctx) {
     const k = world.kitten;
-    const frame = k.tx != null ? k.walkFrame : 0;
-    drawKittenSprite(
-        ctx,
-        Math.round(k.x - KITTEN_W / 2),
-        Math.round(k.y - KITTEN_H),
-        k.facing,
-        frame,
-        world.night ? null : (world.weather === 'rain' ? 'umbrella' : (world.weather === 'snow' ? 'winter' : null))
-    );
+    const flipX = k.facing === 'left';
+    const frameIdx = getAnimSpriteFrame(k);
+    const px = Math.round(k.x - KITTEN_W / 2);
+    const py = Math.round(k.y - KITTEN_H);
+    const accessory = world.night ? null : (world.weather === 'rain' ? 'umbrella' : (world.weather === 'snow' ? 'winter' : null));
+
+    renderSprite(ctx, SPRITES.kitten, frameIdx, px, py, {
+        flipX,
+        shadow: { dx: 1, dy: 1, color: PAL.shadow }
+    });
+
+    // Accessory overlay (umbrella for rain, scarf+hat for snow) — coordinates adjusted for 24×24
+    if (accessory === 'umbrella') {
+        const x = px, y = py;
+        ctx.fillStyle = PAL.red;
+        ctx.fillRect(x + 1, y - 5, 22, 2);
+        ctx.fillRect(x + 3, y - 6, 18, 1);
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(x + 6, y - 5, 3, 2);
+        ctx.fillRect(x + 15, y - 5, 3, 2);
+        ctx.fillStyle = PAL.woodDk;
+        ctx.fillRect(x + 12, y - 3, 1, 5);
+        ctx.fillStyle = PAL.outline;
+        ctx.fillRect(x + 1, y - 3, 22, 1);
+    } else if (accessory === 'winter') {
+        const x = px, y = py;
+        ctx.fillStyle = PAL.red;
+        ctx.fillRect(x + 3, y + 12, 18, 2);
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(x + 6, y + 12, 1, 2);
+        ctx.fillRect(x + 11, y + 12, 1, 2);
+        ctx.fillRect(x + 16, y + 12, 1, 2);
+        ctx.fillStyle = PAL.red;
+        ctx.fillRect(x + 5, y - 2, 14, 2);
+        ctx.fillRect(x + 6, y - 3, 12, 1);
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(x + 5, y, 14, 1);
+        ctx.fillRect(x + 10, y - 4, 3, 1);
+    }
 
     // Purr curls when recently petted
     if (k.purrTimer > 0) {
@@ -670,143 +1721,6 @@ function drawKitten(ctx) {
             ctx.arc(cx, cy, 1.5 + i * 0.3, 0, Math.PI * 2);
             ctx.stroke();
         }
-    }
-}
-
-// The kitten is drawn procedurally with fillRect blocks for a chunky pixel look.
-// (x,y) is the top-left of an 18x18 box.
-function drawKittenSprite(ctx, x, y, facing, frame, accessory) {
-    // Shadow
-    ctx.fillStyle = PAL.shadow;
-    ctx.beginPath();
-    ctx.ellipse(x + 9, y + 18, 8, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Leg wiggle
-    const lift = frame === 1 ? 1 : 0;
-
-    // Body
-    ctx.fillStyle = PAL.cream;
-    ctx.fillRect(x + 2, y + 9, 14, 8);
-    // Outline body
-    ctx.fillStyle = PAL.outline;
-    ctx.fillRect(x + 2, y + 9, 14, 1);  // top
-    ctx.fillRect(x + 2, y + 16, 14, 1); // bottom
-    ctx.fillRect(x + 2, y + 9, 1, 8);   // left
-    ctx.fillRect(x + 15, y + 9, 1, 8);  // right
-
-    // Legs
-    ctx.fillStyle = PAL.outline;
-    ctx.fillRect(x + 4, y + 17 - lift, 2, 1);
-    ctx.fillRect(x + 12, y + 17 + lift, 2, 1);
-    ctx.fillRect(x + 7, y + 17 + lift, 2, 1);
-
-    // Tail — direction-specific
-    ctx.fillStyle = PAL.cream;
-    if (facing === 'right') {
-        ctx.fillRect(x + 16, y + 10, 2, 1);
-        ctx.fillRect(x + 17, y + 9, 1, 3);
-        ctx.fillStyle = PAL.outline;
-        ctx.fillRect(x + 16, y + 9, 2, 1);
-        ctx.fillRect(x + 18, y + 9, 1, 3);
-    } else if (facing === 'left') {
-        ctx.fillRect(x, y + 10, 2, 1);
-        ctx.fillRect(x - 1, y + 9, 1, 3);
-        ctx.fillStyle = PAL.outline;
-        ctx.fillRect(x, y + 9, 2, 1);
-        ctx.fillRect(x - 2, y + 9, 1, 3);
-    } else {
-        ctx.fillRect(x + 15, y + 10, 3, 1);
-        ctx.fillStyle = PAL.outline;
-        ctx.fillRect(x + 15, y + 9, 3, 1);
-        ctx.fillRect(x + 18, y + 9, 1, 2);
-    }
-
-    // Head (bigger than body — "chunky, big head")
-    ctx.fillStyle = PAL.cream;
-    ctx.fillRect(x + 2, y + 2, 14, 9);
-    // Ears
-    ctx.fillRect(x + 2, y, 3, 2);
-    ctx.fillRect(x + 13, y, 3, 2);
-    ctx.fillStyle = PAL.pink;
-    ctx.fillRect(x + 3, y + 1, 1, 1);
-    ctx.fillRect(x + 14, y + 1, 1, 1);
-    // Head outline
-    ctx.fillStyle = PAL.outline;
-    ctx.fillRect(x + 2, y + 2, 14, 1);  // top
-    ctx.fillRect(x + 2, y + 10, 14, 1); // bottom
-    ctx.fillRect(x + 2, y + 2, 1, 9);
-    ctx.fillRect(x + 15, y + 2, 1, 9);
-    // Ear outlines
-    ctx.fillRect(x + 2, y, 3, 1);
-    ctx.fillRect(x + 5, y, 1, 2);
-    ctx.fillRect(x + 13, y, 3, 1);
-    ctx.fillRect(x + 12, y, 1, 2);
-    ctx.fillRect(x + 1, y + 1, 1, 1);
-    ctx.fillRect(x + 16, y + 1, 1, 1);
-
-    // Face — depends on direction
-    if (facing === 'up') {
-        // back of head: tiny ears, no face
-        ctx.fillStyle = PAL.cream;
-        ctx.fillRect(x + 4, y + 5, 10, 3);
-    } else {
-        // Eyes (always smiling arcs)
-        ctx.fillStyle = PAL.eye;
-        if (facing === 'left') {
-            ctx.fillRect(x + 4, y + 5, 2, 1);
-            ctx.fillRect(x + 9, y + 5, 2, 1);
-        } else if (facing === 'right') {
-            ctx.fillRect(x + 7, y + 5, 2, 1);
-            ctx.fillRect(x + 12, y + 5, 2, 1);
-        } else {
-            ctx.fillRect(x + 5, y + 5, 2, 1);
-            ctx.fillRect(x + 11, y + 5, 2, 1);
-        }
-        // Nose
-        ctx.fillStyle = PAL.pinkDk;
-        ctx.fillRect(x + 8, y + 7, 2, 1);
-        // Smile
-        ctx.fillStyle = PAL.outline;
-        ctx.fillRect(x + 7, y + 8, 1, 1);
-        ctx.fillRect(x + 8, y + 9, 2, 1);
-        ctx.fillRect(x + 10, y + 8, 1, 1);
-        // Cheek blush
-        ctx.fillStyle = PAL.pink;
-        ctx.fillRect(x + 4, y + 7, 1, 1);
-        ctx.fillRect(x + 13, y + 7, 1, 1);
-    }
-
-    // Accessory overlay (umbrella for rain, jacket+hat for snow)
-    if (accessory === 'umbrella') {
-        // Umbrella canopy
-        ctx.fillStyle = PAL.red;
-        ctx.fillRect(x + 1, y - 5, 16, 2);
-        ctx.fillRect(x + 3, y - 6, 12, 1);
-        ctx.fillStyle = PAL.white;
-        ctx.fillRect(x + 5, y - 5, 2, 2);
-        ctx.fillRect(x + 11, y - 5, 2, 2);
-        // Handle
-        ctx.fillStyle = PAL.woodDk;
-        ctx.fillRect(x + 9, y - 3, 1, 5);
-        ctx.fillStyle = PAL.outline;
-        ctx.fillRect(x + 1, y - 3, 16, 1);
-    } else if (accessory === 'winter') {
-        // Scarf across body
-        ctx.fillStyle = PAL.red;
-        ctx.fillRect(x + 2, y + 10, 14, 2);
-        ctx.fillStyle = PAL.white;
-        ctx.fillRect(x + 4, y + 10, 1, 2);
-        ctx.fillRect(x + 8, y + 10, 1, 2);
-        ctx.fillRect(x + 12, y + 10, 1, 2);
-        // Hat
-        ctx.fillStyle = PAL.red;
-        ctx.fillRect(x + 4, y - 2, 10, 2);
-        ctx.fillRect(x + 5, y - 3, 8, 1);
-        ctx.fillStyle = PAL.white;
-        ctx.fillRect(x + 4, y, 10, 1);
-        // Pom
-        ctx.fillRect(x + 8, y - 4, 2, 1);
     }
 }
 
@@ -1055,19 +1969,80 @@ function buildRooms() {
             bg: PAL.skyDay,
             melody: 'lullabyA',
             draw: drawGarden,
+            map: buildGardenMap(),
             hotspots: [
                 { kind: 'pond',  x: 80,  y: 150, w: 60, h: 28, state: 0 }
             ],
             collectibles: makeGardenCollectibles(),
             yarnBall: { x: 250, y: 75, collected: false, rolling: false },
             starsSpawned: false,
-            stars: []
+            stars: [],
+            ambientState: {
+                birdX: -20, birdY: 0, birdBaseY: 50, birdTimer: rand(15, 25) * 60, birdActive: false,
+                frogBlinkTimer: rand(5, 8) * 60, frogBlinkFrame: 0,
+                fishTimer: rand(8, 15) * 60, fishActive: false, fishX: 0, fishY: 0, fishArcT: 0,
+                fishSplash: []
+            },
+            ambient: function(dt) {
+                const s = this.ambientState;
+                // Bird flyby
+                if (s.birdActive) {
+                    s.birdX += 0.6 * dt;
+                    s.birdY = s.birdBaseY + Math.sin(s.birdX * 0.04) * 4;
+                    if (s.birdX > GAME.width + 20) s.birdActive = false;
+                } else {
+                    s.birdTimer -= dt;
+                    if (s.birdTimer <= 0) {
+                        s.birdTimer = rand(15, 25) * 60;
+                        s.birdX = -10;
+                        s.birdBaseY = PLAY_TOP + rand(15, 50);
+                        s.birdY = s.birdBaseY;
+                        s.birdActive = true;
+                    }
+                }
+                // Frog blink
+                if (s.frogBlinkFrame > 0) {
+                    s.frogBlinkFrame -= dt;
+                } else {
+                    s.frogBlinkTimer -= dt;
+                    if (s.frogBlinkTimer <= 0) {
+                        s.frogBlinkTimer = rand(5, 8) * 60;
+                        s.frogBlinkFrame = 15;
+                    }
+                }
+                // Fish jump
+                if (s.fishActive) {
+                    s.fishArcT += dt * (1 / 30);
+                    if (s.fishArcT >= 1) {
+                        s.fishActive = false;
+                        s.fishSplash.push({ x: s.fishX, life: 12 });
+                        if (s.fishSplash.length > 5) s.fishSplash.shift();
+                    }
+                } else {
+                    s.fishTimer -= dt;
+                    if (s.fishTimer <= 0) {
+                        s.fishTimer = rand(8, 15) * 60;
+                        const pond = this.hotspots.find(h => h.kind === 'pond');
+                        s.fishX = pond.x + rand(10, pond.w - 10);
+                        s.fishY = pond.y + pond.h / 2;
+                        s.fishArcT = 0;
+                        s.fishActive = true;
+                    }
+                }
+                // Decay splash particles
+                for (let i = s.fishSplash.length - 1; i >= 0; i--) {
+                    s.fishSplash[i].life -= dt;
+                    if (s.fishSplash[i].life <= 0) s.fishSplash.splice(i, 1);
+                }
+            }
         },
         kitchen: {
             id: 'kitchen',
             bg: PAL.peach,
             melody: 'lullabyB',
             draw: drawKitchen,
+            map: buildKitchenMap(),
+            indoor: true,
             hotspots: [
                 { kind: 'food',  x: 120, y: 160, w: 22, h: 14, state: 0 },
                 { kind: 'milk',  x: 170, y: 160, w: 20, h: 12, state: 0 },
@@ -1077,13 +2052,65 @@ function buildRooms() {
             yarnBall: { x: 50, y: 60, collected: false },
             starsSpawned: false,
             stars: [],
-            treatsOffered: 0
+            treatsOffered: 0,
+            ambientState: {
+                steamParticles: [],
+                steamTimer: rand(3, 5) * 60,
+                mousePeekTimer: rand(20, 40) * 60, mousePeekFrame: 0,
+                dustX: 200, dustY: PLAY_TOP + 10, dustTimer: 0
+            },
+            ambient: function(dt) {
+                const s = this.ambientState;
+                // Steam wisps from food bowl
+                s.steamTimer -= dt;
+                if (s.steamTimer <= 0) {
+                    s.steamTimer = rand(3, 5) * 60;
+                    const food = this.hotspots.find(h => h.kind === 'food');
+                    for (let i = 0; i < 3; i++) {
+                        if (s.steamParticles.length < 10) {
+                            s.steamParticles.push({
+                                x: food.x + rand(4, food.w - 4),
+                                y: food.y,
+                                life: 40, maxLife: 40
+                            });
+                        }
+                    }
+                }
+                for (let i = s.steamParticles.length - 1; i >= 0; i--) {
+                    const p = s.steamParticles[i];
+                    p.y -= 0.25 * dt;
+                    p.x += Math.sin(p.life * 0.2) * 0.1 * dt;
+                    p.life -= dt;
+                    if (p.life <= 0) s.steamParticles.splice(i, 1);
+                }
+                // Mouse peek
+                if (s.mousePeekFrame > 0) {
+                    s.mousePeekFrame -= dt;
+                } else {
+                    s.mousePeekTimer -= dt;
+                    if (s.mousePeekTimer <= 0) {
+                        s.mousePeekTimer = rand(20, 40) * 60;
+                        s.mousePeekFrame = 60;
+                    }
+                }
+                // Dust mote
+                s.dustTimer -= dt;
+                if (s.dustTimer <= 0) {
+                    s.dustTimer = rand(5, 8) * 60;
+                    s.dustX = rand(180, 220);
+                    s.dustY = PLAY_TOP + 10;
+                }
+                s.dustY += 0.15 * dt;
+                s.dustX += Math.sin(s.dustY * 0.08) * 0.1 * dt;
+            }
         },
         bedroom: {
             id: 'bedroom',
             bg: PAL.lav,
             melody: 'lullabyC',
             draw: drawBedroom,
+            map: buildBedroomMap(),
+            indoor: true,
             hotspots: [
                 { kind: 'bed', x: 250, y: 130, w: 80, h: 40, state: 0 }
             ],
@@ -1091,13 +2118,54 @@ function buildRooms() {
             yarnBall: { x: 200, y: 195, collected: false },
             toyBoxFill: 0,
             starsSpawned: false,
-            stars: []
+            stars: [],
+            ambientState: {
+                cozyMotes: [
+                    { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) },
+                    { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) },
+                    { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) },
+                    { x: rand(40, 350), y: rand(PLAY_TOP + 20, 190), vx: rand(-0.15, 0.15), vy: rand(-0.1, 0.1) }
+                ],
+                yarnWobbleTimer: rand(10, 15) * 60, yarnWobbleFrame: 0,
+                pillowTimer: rand(8, 12) * 60, pillowFrame: 0
+            },
+            ambient: function(dt) {
+                const s = this.ambientState;
+                // Cozy motes drift
+                for (const m of s.cozyMotes) {
+                    m.x += m.vx * dt;
+                    m.y += m.vy * dt;
+                    if (m.x < 20 || m.x > GAME.width - 20) m.vx = -m.vx;
+                    if (m.y < PLAY_TOP + 10 || m.y > GAME.height - 10) m.vy = -m.vy;
+                }
+                // Yarn wobble
+                if (s.yarnWobbleFrame > 0) {
+                    s.yarnWobbleFrame -= dt;
+                } else {
+                    s.yarnWobbleTimer -= dt;
+                    if (s.yarnWobbleTimer <= 0) {
+                        s.yarnWobbleTimer = rand(10, 15) * 60;
+                        s.yarnWobbleFrame = 8;
+                    }
+                }
+                // Pillow puff
+                if (s.pillowFrame > 0) {
+                    s.pillowFrame -= dt;
+                } else {
+                    s.pillowTimer -= dt;
+                    if (s.pillowTimer <= 0) {
+                        s.pillowTimer = rand(8, 12) * 60;
+                        s.pillowFrame = 10;
+                    }
+                }
+            }
         },
         beach: {
             id: 'beach',
             bg: PAL.sand,
             melody: 'lullabyD',
             draw: drawBeach,
+            map: buildBeachMap(),
             hotspots: [
                 { kind: 'waves', x: 0,  y: PLAY_TOP + 6,  w: GAME.width, h: 20, state: 0 },
                 { kind: 'crab',  x: 240, y: 170, w: 20, h: 14, state: 0, offset: 0 }
@@ -1105,7 +2173,68 @@ function buildRooms() {
             collectibles: makeBeachCollectibles(),
             yarnBall: { x: 150, y: 180, collected: false },
             starsSpawned: false,
-            stars: []
+            stars: [],
+            ambientState: {
+                seabirdX: -20, seabirdY: 0, seabirdBaseY: 0, seabirdTimer: rand(15, 25) * 60, seabirdActive: false,
+                sprayParticles: [], sprayTimer: rand(4, 8) * 60,
+                sandPuffs: []
+            },
+            ambient: function(dt) {
+                const s = this.ambientState;
+                // Seabird flyby
+                if (s.seabirdActive) {
+                    s.seabirdX += 0.5 * dt;
+                    s.seabirdY = s.seabirdBaseY + Math.sin(s.seabirdX * 0.03) * 3;
+                    if (s.seabirdX > GAME.width + 20) s.seabirdActive = false;
+                } else {
+                    s.seabirdTimer -= dt;
+                    if (s.seabirdTimer <= 0) {
+                        s.seabirdTimer = rand(15, 25) * 60;
+                        s.seabirdX = -10;
+                        s.seabirdBaseY = PLAY_TOP + rand(10, 35);
+                        s.seabirdY = s.seabirdBaseY;
+                        s.seabirdActive = true;
+                    }
+                }
+                // Wave spray
+                s.sprayTimer -= dt;
+                if (s.sprayTimer <= 0) {
+                    s.sprayTimer = rand(4, 8) * 60;
+                    const sx = rand(20, GAME.width - 20);
+                    for (let i = 0; i < 3; i++) {
+                        if (s.sprayParticles.length < 10) {
+                            s.sprayParticles.push({
+                                x: sx + rand(-6, 6), y: PLAY_TOP + rand(46, 54),
+                                vy: -rand(0.2, 0.5), life: 25, maxLife: 25
+                            });
+                        }
+                    }
+                }
+                for (let i = s.sprayParticles.length - 1; i >= 0; i--) {
+                    const p = s.sprayParticles[i];
+                    p.y += p.vy * dt;
+                    p.life -= dt;
+                    if (p.life <= 0) s.sprayParticles.splice(i, 1);
+                }
+                // Sand puffs near walking kitten
+                const k = world.kitten;
+                if (k.tx != null && k.y > PLAY_TOP + 56) {
+                    if (Math.random() < 0.12) {
+                        if (s.sandPuffs.length < 10) {
+                            s.sandPuffs.push({
+                                x: k.x + rand(-3, 3), y: k.y + rand(2, 5),
+                                life: 18, maxLife: 18
+                            });
+                        }
+                    }
+                }
+                for (let i = s.sandPuffs.length - 1; i >= 0; i--) {
+                    const p = s.sandPuffs[i];
+                    p.y -= 0.08 * dt;
+                    p.life -= dt;
+                    if (p.life <= 0) s.sandPuffs.splice(i, 1);
+                }
+            }
         }
     };
 }
@@ -1153,78 +2282,71 @@ function makeBeachCollectibles() {
 // ---- Room scenery drawers ----
 
 function drawGarden(ctx) {
-    // Top-down: the whole play area is grass.
-    ctx.fillStyle = PAL.grass;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
+    const room = world.rooms.garden;
+    drawTileLayer(ctx, room.map, 'ground');
+    drawTileLayer(ctx, room.map, 'decoration');
 
-    // Grass blade dotting for texture
-    ctx.fillStyle = PAL.grassDk;
-    for (let i = 0; i < 36; i++) {
-        const x = (i * 53 + 11) % GAME.width;
-        const y = PLAY_TOP + 8 + (i * 31) % (GAME.height - PLAY_TOP - 18);
-        ctx.fillRect(x, y, 2, 1);
-    }
-
-    // Stone path footprints arc through the middle (decorative)
-    ctx.fillStyle = PAL.stone;
-    for (let i = 0; i < 6; i++) {
-        const sx = 60 + i * 50;
-        const sy = 110 + Math.sin(i * 0.7) * 12;
-        ctx.beginPath();
-        ctx.ellipse(sx, sy, 4, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Trees scattered across the field
+    // Trees (trunks/shadows — foliage drawn in overlay after kitten)
     drawTree(ctx, 30, 70);
     drawTree(ctx, 350, 80);
     drawTree(ctx, 200, 50);
 
-    // Bushes scattered
+    // Bushes
     drawBush(ctx, 110, 60);
     drawBush(ctx, 280, 70);
     drawBush(ctx, 60, 200);
     drawBush(ctx, 320, 200);
 
     // Pond shimmer
-    const room = world.rooms.garden;
     const pond = room.hotspots.find(h => h.kind === 'pond');
     drawPond(ctx, pond);
 
-    // Background micro-flowers scattered everywhere
-    for (let i = 0; i < 14; i++) {
-        const fx = (i * 37 + 17) % GAME.width;
-        const fy = PLAY_TOP + 20 + (i * 19) % (GAME.height - PLAY_TOP - 30);
-        ctx.fillStyle = PAL.white;
-        ctx.fillRect(fx, fy, 1, 1);
-        ctx.fillRect(fx + 1, fy - 1, 1, 1);
-        ctx.fillRect(fx - 1, fy - 1, 1, 1);
-        ctx.fillRect(fx, fy - 2, 1, 1);
+    // Ambient effects
+    const s = room.ambientState;
+    if (s) {
+        // Bird flyby
+        if (s.birdActive) {
+            const bx = Math.round(s.birdX);
+            const by = Math.round(s.birdY);
+            // Shadow on ground
+            ctx.fillStyle = PAL.shadow;
+            ctx.fillRect(bx, PLAY_TOP + 120, 3, 1);
+            // Bird body
+            ctx.fillStyle = PAL.outline;
+            ctx.fillRect(bx + 1, by, 2, 1);
+            // Wings (flap using sessionTick)
+            const wingUp = Math.sin(world.sessionTick * 0.3) > 0;
+            ctx.fillRect(bx, by + (wingUp ? -1 : 1), 1, 1);
+            ctx.fillRect(bx + 3, by + (wingUp ? -1 : 1), 1, 1);
+        }
+        // Fish jump
+        if (s.fishActive) {
+            const t = s.fishArcT;
+            const fx = Math.round(s.fishX);
+            const fy = Math.round(s.fishY - Math.sin(t * Math.PI) * 10);
+            ctx.fillStyle = PAL.orange;
+            ctx.fillRect(fx, fy, 2, 1);
+            ctx.fillStyle = PAL.outline;
+            ctx.fillRect(fx + 2, fy, 1, 1);
+        }
+        // Fish splash particles
+        for (const sp of s.fishSplash) {
+            const a = sp.life / 12;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = PAL.white;
+            ctx.fillRect(Math.round(sp.x - 1), Math.round(s.fishY), 1, 1);
+            ctx.fillRect(Math.round(sp.x + 2), Math.round(s.fishY), 1, 1);
+            ctx.globalAlpha = 1;
+        }
     }
 }
 
 function drawKitchen(ctx) {
-    // Top-down: the whole play area is tile floor.
-    ctx.fillStyle = PAL.cream;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
-    // Tile grid
-    ctx.fillStyle = PAL.peach;
-    for (let x = 0; x < GAME.width; x += 24) {
-        ctx.fillRect(x, PLAY_TOP, 1, GAME.height - PLAY_TOP);
-    }
-    for (let y = PLAY_TOP + 12; y < GAME.height; y += 24) {
-        ctx.fillRect(0, y, GAME.width, 1);
-    }
-    // Cozy rug in the center
-    ctx.fillStyle = PAL.red;
-    ctx.fillRect(80, 130, 130, 50);
-    ctx.fillStyle = PAL.yellow;
-    ctx.fillRect(80, 130, 130, 2);
-    ctx.fillRect(80, 178, 130, 2);
-    for (let i = 0; i < 13; i++) {
-        ctx.fillRect(80 + i * 10, 134, 1, 42);
-    }
-    // Mouse hole — round hole on the floor
+    const room = world.rooms.kitchen;
+    drawTileLayer(ctx, room.map, 'ground');
+    drawTileLayer(ctx, room.map, 'decoration');
+
+    // Mouse hole — round hole on the floor (drawn on top for smooth ellipse)
     ctx.fillStyle = PAL.outline;
     ctx.beginPath();
     ctx.ellipse(330, 175, 11, 7, 0, 0, Math.PI * 2);
@@ -1233,24 +2355,48 @@ function drawKitchen(ctx) {
     ctx.beginPath();
     ctx.ellipse(330, 173, 9, 5, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Ambient effects
+    const s = room.ambientState;
+    if (s) {
+        // Steam wisps
+        for (const p of s.steamParticles) {
+            const a = p.life / p.maxLife;
+            ctx.globalAlpha = a * 0.5;
+            ctx.fillStyle = PAL.white;
+            ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+            ctx.globalAlpha = 1;
+        }
+        // Mouse peek (small brown nose at the hole)
+        if (s.mousePeekFrame > 0) {
+            const peekT = s.mousePeekFrame / 60;
+            const peekSize = peekT > 0.8 ? 1 : peekT > 0.2 ? 2 : 1;
+            ctx.fillStyle = PAL.mouseDk;
+            ctx.beginPath();
+            ctx.arc(330, 173, peekSize, 0, Math.PI * 2);
+            ctx.fill();
+            if (peekSize > 1) {
+                // Tiny eye
+                ctx.fillStyle = PAL.eye;
+                ctx.fillRect(329, 172, 1, 1);
+            }
+        }
+        // Dust mote
+        if (s.dustY < GAME.height) {
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = PAL.white;
+            ctx.fillRect(Math.round(s.dustX), Math.round(s.dustY), 1, 1);
+            ctx.globalAlpha = 1;
+        }
+    }
 }
 
 function drawBedroom(ctx) {
-    // Top-down: the whole play area is wood plank floor.
-    ctx.fillStyle = PAL.lav;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, GAME.height - PLAY_TOP);
-    // Plank lines (horizontal grain)
-    ctx.fillStyle = PAL.lavDk;
-    for (let y = PLAY_TOP + 14; y < GAME.height; y += 18) {
-        ctx.fillRect(0, y, GAME.width, 1);
-    }
-    // Plank seams (vertical breaks, offset per row)
-    for (let row = 0; row < 12; row++) {
-        const y = PLAY_TOP + row * 18;
-        const x = ((row % 2) * 60 + 30) + ((row * 53) % 200);
-        ctx.fillRect(x, y, 1, 18);
-    }
-    // Cozy oval rug in the center
+    const room = world.rooms.bedroom;
+    drawTileLayer(ctx, room.map, 'ground');
+    drawTileLayer(ctx, room.map, 'decoration');
+
+    // Cozy oval rug in the center (smooth ellipse on top of tiles)
     ctx.fillStyle = PAL.pink;
     ctx.beginPath();
     ctx.ellipse(160, 130, 50, 22, 0, 0, Math.PI * 2);
@@ -1263,41 +2409,71 @@ function drawBedroom(ctx) {
     ctx.beginPath();
     ctx.ellipse(160, 130, 36, 14, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Bed
-    drawBed(ctx, world.rooms.bedroom.hotspots.find(h => h.kind === 'bed'));
+    // Bed (with pillow puff ambient)
+    const s = room.ambientState;
+    const pillowOff = (s && s.pillowFrame > 0) ? Math.round(Math.sin(s.pillowFrame * 0.8) * 1) : 0;
+    drawBed(ctx, room.hotspots.find(h => h.kind === 'bed'), pillowOff);
     // Toy box (top-left corner of the play area)
-    drawToyBox(ctx, 30, 50, world.rooms.bedroom.toyBoxFill);
+    drawToyBox(ctx, 30, 50, room.toyBoxFill);
+
+    // Ambient effects
+    if (s) {
+        // Cozy motes
+        for (const m of s.cozyMotes) {
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = PAL.pink;
+            ctx.fillRect(Math.round(m.x), Math.round(m.y), 1, 1);
+            ctx.globalAlpha = 1;
+        }
+        // Yarn wobble offset stored for drawCollectibles to pick up
+        if (s.yarnWobbleFrame > 0) {
+            room._yarnWobbleOff = Math.round(Math.sin(s.yarnWobbleFrame * 1.2) * 1);
+        } else {
+            room._yarnWobbleOff = 0;
+        }
+    }
 }
 
 function drawBeach(ctx) {
-    // Sea
-    ctx.fillStyle = PAL.sea;
-    ctx.fillRect(0, PLAY_TOP, GAME.width, 50);
-    // Wave crests
-    ctx.fillStyle = PAL.seaDk;
-    for (let x = 0; x < GAME.width; x += 16) {
-        const dy = Math.sin((x + world.sessionTick * 0.8) * 0.1) * 2;
-        ctx.fillRect(x, PLAY_TOP + 45 + dy, 8, 2);
+    const room = world.rooms.beach;
+    drawTileLayer(ctx, room.map, 'ground');
+    drawTileLayer(ctx, room.map, 'decoration');
+
+    // Ambient effects
+    const s = room.ambientState;
+    if (s) {
+        // Seabird flyby
+        if (s.seabirdActive) {
+            const bx = Math.round(s.seabirdX);
+            const by = Math.round(s.seabirdY);
+            // Shadow on water
+            ctx.fillStyle = PAL.shadow;
+            ctx.fillRect(bx, PLAY_TOP + 40, 3, 1);
+            // Bird body (white/grey seabird)
+            ctx.fillStyle = PAL.stone;
+            ctx.fillRect(bx + 1, by, 2, 1);
+            ctx.fillStyle = PAL.white;
+            const wingUp = Math.sin(world.sessionTick * 0.25) > 0;
+            ctx.fillRect(bx, by + (wingUp ? -1 : 1), 1, 1);
+            ctx.fillRect(bx + 3, by + (wingUp ? -1 : 1), 1, 1);
+        }
+        // Wave spray
+        for (const p of s.sprayParticles) {
+            const a = p.life / p.maxLife;
+            ctx.globalAlpha = a * 0.6;
+            ctx.fillStyle = PAL.white;
+            ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+            ctx.globalAlpha = 1;
+        }
+        // Sand puffs
+        for (const p of s.sandPuffs) {
+            const a = p.life / p.maxLife;
+            ctx.globalAlpha = a * 0.4;
+            ctx.fillStyle = PAL.sandDk;
+            ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+            ctx.globalAlpha = 1;
+        }
     }
-    // Wet sand
-    ctx.fillStyle = PAL.sandDk;
-    ctx.fillRect(0, PLAY_TOP + 50, GAME.width, 6);
-    // Dry sand
-    ctx.fillStyle = PAL.sand;
-    ctx.fillRect(0, PLAY_TOP + 56, GAME.width, GAME.height - PLAY_TOP - 56);
-    // Sand dots
-    ctx.fillStyle = PAL.sandDk;
-    for (let i = 0; i < 40; i++) {
-        const x = (i * 17 + 3) % GAME.width;
-        const y = PLAY_TOP + 60 + (i * 23) % (GAME.height - PLAY_TOP - 66);
-        ctx.fillRect(x, y, 1, 1);
-    }
-    // A rock
-    ctx.fillStyle = PAL.stone;
-    ctx.fillRect(50, 160, 18, 10);
-    ctx.fillStyle = PAL.outline;
-    ctx.fillRect(50, 160, 18, 1);
-    ctx.fillRect(50, 169, 18, 1);
 }
 
 function drawTree(ctx, x, y) {
@@ -1371,7 +2547,8 @@ function drawPond(ctx, pond) {
     ctx.stroke();
 }
 
-function drawBed(ctx, bed) {
+function drawBed(ctx, bed, pillowOff) {
+    const pOff = pillowOff || 0;
     // Bed frame
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(bed.x, bed.y + bed.h - 12, bed.w, 12);
@@ -1380,11 +2557,11 @@ function drawBed(ctx, bed) {
     // Headboard
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(bed.x + bed.w - 6, bed.y, 6, bed.h);
-    // Pillow
+    // Pillow (with ambient sway)
     ctx.fillStyle = PAL.white;
-    ctx.fillRect(bed.x + bed.w - 26, bed.y + 8, 18, 10);
+    ctx.fillRect(bed.x + bed.w - 26 + pOff, bed.y + 8, 18, 10);
     ctx.fillStyle = PAL.outline;
-    ctx.fillRect(bed.x + bed.w - 26, bed.y + 8, 18, 1);
+    ctx.fillRect(bed.x + bed.w - 26 + pOff, bed.y + 8, 18, 1);
     // Blanket
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(bed.x + 4, bed.y + 16, bed.w - 30, bed.h - 28);
@@ -1420,10 +2597,10 @@ function drawToyBox(ctx, x, y, fill) {
 
 function drawKittenPortrait(ctx, x, y) {
     ctx.fillStyle = PAL.wood;
-    ctx.fillRect(x, y, 24, 22);
+    ctx.fillRect(x, y, 28, 28);
     ctx.fillStyle = PAL.cream;
-    ctx.fillRect(x + 2, y + 2, 20, 18);
-    drawKittenSprite(ctx, x + 3, y + 3, 'down', 0, null);
+    ctx.fillRect(x + 2, y + 2, 24, 24);
+    renderSprite(ctx, SPRITES.kitten, 0, x + 2, y + 2, {});
 }
 
 // ==================== HOTSPOTS ====================
@@ -1627,13 +2804,26 @@ function drawFrog(ctx, pond) {
     ctx.fillRect(fx + 1, fy - 2, 8, 2);
     ctx.fillStyle = PAL.frogGD;
     ctx.fillRect(fx, fy + 5, 10, 1);
-    // Eyes
-    ctx.fillStyle = PAL.white;
-    ctx.fillRect(fx + 2, fy - 3, 2, 2);
-    ctx.fillRect(fx + 6, fy - 3, 2, 2);
-    ctx.fillStyle = PAL.eye;
-    ctx.fillRect(fx + 3, fy - 2, 1, 1);
-    ctx.fillRect(fx + 7, fy - 2, 1, 1);
+    // Eyes — check frog blink ambient state
+    const gardenAmb = world.rooms.garden && world.rooms.garden.ambientState;
+    const blinkF = gardenAmb ? gardenAmb.frogBlinkFrame : 0;
+    const blinkPhase = blinkF > 0 ? (blinkF > 10 ? 1 : blinkF > 5 ? 2 : blinkF > 2 ? 1 : 0) : 0;
+    // 0 = open, 1 = half, 2 = closed
+    if (blinkPhase < 2) {
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(fx + 2, fy - 3, 2, blinkPhase === 1 ? 1 : 2);
+        ctx.fillRect(fx + 6, fy - 3, 2, blinkPhase === 1 ? 1 : 2);
+        if (blinkPhase === 0) {
+            ctx.fillStyle = PAL.eye;
+            ctx.fillRect(fx + 3, fy - 2, 1, 1);
+            ctx.fillRect(fx + 7, fy - 2, 1, 1);
+        }
+    } else {
+        // Closed — just a line
+        ctx.fillStyle = PAL.frogGD;
+        ctx.fillRect(fx + 2, fy - 3, 2, 1);
+        ctx.fillRect(fx + 6, fy - 3, 2, 1);
+    }
 }
 
 function drawMouse(ctx, hs) {
@@ -1774,7 +2964,8 @@ function drawCollectibles(ctx, room) {
     // Yarn ball (if not yet collected)
     if (!room.yarnBall.collected) {
         const yIdx = ROOM_ORDER.indexOf(room.id);
-        drawYarnBall(ctx, room.yarnBall.x, room.yarnBall.y, yIdx);
+        const wobble = room._yarnWobbleOff || 0;
+        drawYarnBall(ctx, room.yarnBall.x + wobble, room.yarnBall.y, yIdx);
     }
 
     // Stars (night)

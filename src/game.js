@@ -3295,18 +3295,18 @@ function trySecretTap(x, y) {
     if (!room.secrets) return false;
     for (const s of room.secrets) {
         if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) {
-            if (s.found) {
-                s.reaction();
-                return true;
-            }
             s.tapCount++;
-            s.tapTimer = 90; // 1.5s window
-            if (s.tapCount >= s.requiredTaps) {
+            s.tapTimer = 90;
+            if (s.found || s.tapCount >= s.requiredTaps) {
                 s.found = true;
-                s.reaction();
+                // Queue a walk; reaction fires on arrival
+                s.queued = true;
+                s.queuedX = s.x + s.w / 2;
+                s.queuedY = s.y + s.h + 6;
+                setKittenTarget(s.queuedX, s.queuedY);
                 return true;
             }
-            return false; // hit but threshold not met — fall through to walk
+            return false;
         }
     }
     return false;
@@ -3315,12 +3315,20 @@ function trySecretTap(x, y) {
 function updateSecrets(dt) {
     const room = currentRoom();
     if (!room.secrets) return;
+    const k = world.kitten;
     for (const s of room.secrets) {
         if (s.tapTimer > 0) {
             s.tapTimer -= dt;
             if (s.tapTimer <= 0) {
                 s.tapTimer = 0;
                 s.tapCount = 0;
+            }
+        }
+        if (s.queued && k.tx == null && !k.busy) {
+            const reach = Math.hypot(k.x - s.queuedX, k.y - s.queuedY);
+            if (reach < 6) {
+                s.queued = false;
+                s.reaction();
             }
         }
     }

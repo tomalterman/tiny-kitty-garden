@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v10 — Layered ambient + reaction audio, smooth scene transitions (`TBD`)
+## v10 — Layered ambient + reaction audio, smooth scene transitions (`6d16242`)
 
 **What changed**
 

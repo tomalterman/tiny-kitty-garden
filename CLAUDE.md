@@ -1,16 +1,19 @@
-# Arcade Game Template
+# Tiny Kitty Garden
 
-A reusable single-file HTML template for arcade-style games.
+This repo is a downstream tap-to-play game built from `../arcade-template`, not
+the template itself. Keep game-specific work here and move reusable engine
+improvements back to `../arcade-template` deliberately.
 
 ## Structure
 
-This is a template - the `index.html` contains a working example game ("Block Dodge") that demonstrates the template. To create a new game, copy `index.html` and replace the game-specific sections.
+`index.html` and `dist/index.html` are built outputs. The source files live in
+`src/`.
 
-### Sections in index.html
-1. **GAME CONFIGURATION** - Edit: game name, colors, Firebase, controls
-2. **TEMPLATE ENGINE** - Don't edit: canvas, game loop, input, sound, high scores
-3. **GAME SOUNDS** - Edit: sound definitions
-4. **GAME LOGIC** - Replace: your game code
+### Source Sections
+1. `src/game-config.js` - game name, hidden UI, tap-only controls
+2. `src/template.html` - shared arcade shell copied from arcade-template
+3. `src/game-sounds.js` - sound definitions
+4. `src/game.js` - Tiny Kitty Garden game logic
 
 ## Versioning
 
@@ -74,6 +77,6 @@ Optional:
 ## Decision Making
 
 - Prefer action over questions
-- Keep games age-appropriate and fun for a 6-year-old
+- Keep the game age-appropriate and fun for a very young child
 - Use procedural graphics (Canvas API) - no image files
 - All sounds are procedural (Web Audio API) - no audio files

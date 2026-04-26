@@ -9,7 +9,7 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
-## v11 — Full Stardew art quality pass: tile density, sprite charm, room decorations (`<pending>`)
+## v11 — Full Stardew art quality pass: tile density, sprite charm, room decorations (`cefe1bd`)
 
 **What changed**
 

@@ -11,41 +11,65 @@ const PAL = {
     mintDk:   '#8ec9a0',
     mintDp:   '#6ba686',
     grass:    '#a8dfa0',
+    grassLt:  '#c4ebb8',
+    grassMd:  '#90cc88',
     grassDk:  '#78b472',
+    earth:    '#a8825a',
     peach:    '#ffcdb2',
     peachDk:  '#e9a890',
     lav:      '#e6d4ee',
+    lavLt:    '#f2e5f6',
     lavDk:    '#b098c0',
     sky:      '#a6d8ff',
+    skyLt:    '#cfe8ff',
     skyDk:    '#7bb9ec',
     sea:      '#9dd4f3',
+    seaLt:    '#c4e6f9',
+    seaMd:    '#88c5e8',
     seaDk:    '#6fb5dc',
+    seaDp:    '#4a91bc',
     sand:     '#fde7a6',
+    sandLt:   '#fff3c6',
     sandDk:   '#e9c875',
+    sandDp:   '#c9a55a',
     pink:     '#ffb6c1',
+    pinkLt:   '#ffd5dc',
     pinkDk:   '#e08899',
     cream:    '#fff9f0',
+    creamDk:  '#ede0d0',
     white:    '#ffffff',
     wood:     '#d4a878',
+    woodLt:   '#e8c79a',
     woodDk:   '#8b6a48',
+    woodDp:   '#5a4028',
     stone:    '#c0b8aa',
+    stoneLt:  '#d8d0c2',
+    stoneDk:  '#8e8678',
+    moss:     '#8bb878',
     outline:  '#5a4033',
     shadow:   'rgba(0,0,0,0.15)',
+    shadowDk: 'rgba(0,0,0,0.22)',
     eye:      '#2a1f26',
     red:      '#ff6b8a',
+    redDk:    '#c04868',
     orange:   '#ffb16b',
     yellow:   '#ffe07a',
+    yellowLt: '#fff0a8',
     green:    '#9cdd7a',
     blue:     '#8ec5ff',
     purple:   '#c9a2ff',
     star:     '#fff3a3',
     frogG:    '#8ccc66',
     frogGD:   '#5c9c46',
+    frogGL:   '#b8e08a',
     crab:     '#ff8a70',
     crabDk:   '#c0553a',
+    crabLt:   '#ffb098',
     mouse:    '#cdb7a3',
+    mouseLt:  '#e0ceb8',
     mouseDk:  '#8e7a66',
-    butterY:  '#ffe85a'
+    butterY:  '#ffe85a',
+    berry:    '#d04868'
 };
 
 const SHELF_H = 28;
@@ -230,225 +254,726 @@ const MAP_ROWS = Math.ceil((216 - SHELF_H) / TILE_SIZE);
 const TILES = {};
 
 // ---------- Garden tiles ----------
-TILES.gA = { surface: 'grass', draw(ctx, x, y) {
+// Grass tiles use 8-12 fillRect calls each: base fill, highlight patches,
+// dark blade verticals, and variant accents (earth speck / clover / daisy).
+// All offsets are driven by `seed` so adjacent tiles vary.
+TILES.gA = { surface: 'grass', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
+    // Subtle light patches
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x + (seed % 6) + 1, y + ((seed >> 3) % 6) + 2, 2, 1);
+    ctx.fillRect(x + ((seed >> 4) % 8) + 6, y + ((seed >> 2) % 5) + 9, 1, 1);
+    // Dark blade verticals (2-3 px tall)
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + ((seed >> 1) % 12) + 2, y + ((seed >> 5) % 8) + 4, 1, 2);
+    ctx.fillRect(x + ((seed >> 2) % 10) + 4, y + ((seed >> 6) % 6) + 10, 1, 2);
+    ctx.fillRect(x + ((seed >> 3) % 9) + 7, y + ((seed >> 1) % 7) + 3, 1, 3);
+    // Mid-tone filler between blades
+    ctx.fillStyle = PAL.grassMd;
+    ctx.fillRect(x + ((seed >> 5) % 13) + 1, y + ((seed >> 4) % 12) + 2, 1, 1);
+    ctx.fillRect(x + ((seed >> 7) % 14) + 1, y + ((seed >> 2) % 13) + 1, 1, 1);
+    // Tiny earth speck
+    ctx.fillStyle = PAL.earth;
+    ctx.fillRect(x + ((seed >> 6) % 12) + 2, y + ((seed >> 3) % 10) + 5, 1, 1);
 }};
 TILES.gB = { surface: 'grass', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
+    // Prominent blade cluster
     ctx.fillStyle = PAL.grassDk;
-    ctx.fillRect(x + (seed % 11) + 2, y + (seed % 7) + 4, 2, 1);
+    const bx = x + (seed % 9) + 3;
+    const by = y + ((seed >> 2) % 6) + 7;
+    ctx.fillRect(bx, by, 1, 4);
+    ctx.fillRect(bx + 1, by + 1, 1, 3);
+    ctx.fillRect(bx + 2, by, 1, 4);
+    ctx.fillRect(bx + 3, by + 1, 1, 3);
+    // Secondary blades
+    ctx.fillRect(x + ((seed >> 4) % 13) + 1, y + ((seed >> 5) % 8) + 3, 1, 2);
+    ctx.fillRect(x + ((seed >> 6) % 12) + 2, y + ((seed >> 7) % 10) + 2, 1, 2);
+    // Light tips on some blades
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(bx + 2, by - 1, 1, 1);
+    ctx.fillRect(x + ((seed >> 3) % 13) + 1, y + ((seed >> 4) % 12) + 1, 1, 1);
+    // Mid filler
+    ctx.fillStyle = PAL.grassMd;
+    ctx.fillRect(x + ((seed >> 8) % 14) + 1, y + ((seed >> 6) % 13) + 1, 1, 1);
 }};
 TILES.gC = { surface: 'grass', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
+    // Faint blades
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + ((seed >> 1) % 12) + 1, y + ((seed >> 5) % 10) + 2, 1, 2);
+    ctx.fillRect(x + ((seed >> 3) % 10) + 4, y + ((seed >> 4) % 8) + 10, 1, 2);
+    // Clover: 3 small leaves around a tiny center
+    const cx = x + (seed % 10) + 3;
+    const cy = y + ((seed >> 2) % 9) + 5;
     ctx.fillStyle = PAL.mintDk;
-    ctx.fillRect(x + (seed % 10) + 3, y + (seed % 9) + 3, 2, 2);
+    ctx.fillRect(cx, cy, 2, 2);
+    ctx.fillRect(cx + 2, cy - 1, 2, 2);
+    ctx.fillRect(cx - 1, cy + 1, 2, 2);
+    ctx.fillStyle = PAL.moss;
+    ctx.fillRect(cx + 1, cy, 1, 1);
+    ctx.fillRect(cx + 2, cy, 1, 1);
+    // Highlight
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x + ((seed >> 7) % 14) + 1, y + ((seed >> 6) % 13) + 1, 1, 1);
 }};
 TILES.gD = { surface: 'grass', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
-    const dx = x + (seed % 10) + 3, dy = y + (seed % 8) + 2;
+    // Blade base
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + ((seed >> 2) % 11) + 2, y + ((seed >> 5) % 7) + 9, 1, 3);
+    // Daisy stem
+    ctx.fillStyle = PAL.grassDk;
+    const dx = x + (seed % 9) + 4, dy = y + ((seed >> 3) % 7) + 5;
+    ctx.fillRect(dx, dy + 1, 1, 3);
+    // Daisy petals (5 pixels around center)
     ctx.fillStyle = PAL.white;
-    ctx.fillRect(dx, dy, 1, 1);
-    ctx.fillRect(dx + 1, dy - 1, 1, 1);
-    ctx.fillRect(dx - 1, dy - 1, 1, 1);
-    ctx.fillRect(dx, dy - 2, 1, 1);
-    ctx.fillStyle = PAL.yellow;
     ctx.fillRect(dx, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy, 1, 1);
+    ctx.fillRect(dx + 1, dy, 1, 1);
+    ctx.fillRect(dx, dy + 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    // Daisy center
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(dx, dy, 1, 1);
+    // Leaf on stem
+    ctx.fillStyle = PAL.mintDk;
+    ctx.fillRect(dx - 1, dy + 2, 1, 1);
+    // Light patch
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x + ((seed >> 6) % 13) + 1, y + ((seed >> 7) % 12) + 1, 1, 1);
 }};
-TILES.stA = { surface: 'stone', draw(ctx, x, y) {
+TILES.stA = { surface: 'stone', draw(ctx, x, y, seed) {
+    // Grass backdrop with a hint of blade
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + 1, y + 2, 1, 1);
+    ctx.fillRect(x + 14, y + 14, 1, 1);
+    // Rounded cobble body
     ctx.fillStyle = PAL.stone;
     ctx.fillRect(x + 3, y + 4, 10, 8);
+    ctx.fillRect(x + 2, y + 5, 12, 6);
+    ctx.fillRect(x + 4, y + 3, 8, 10);
+    // Top highlight
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(x + 4, y + 4, 6, 1);
+    ctx.fillRect(x + 3, y + 5, 1, 2);
+    // Bottom shadow (mortar line)
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(x + 3, y + 11, 10, 1);
+    ctx.fillRect(x + 12, y + 5, 1, 6);
+    // Moss / crack accent
+    ctx.fillStyle = PAL.moss;
+    ctx.fillRect(x + 5 + (seed % 4), y + 10, 1, 1);
 }};
-TILES.stB = { surface: 'stone', draw(ctx, x, y) {
+TILES.stB = { surface: 'stone', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.grass;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + 15, y + 1, 1, 1);
+    // Wider cobble
     ctx.fillStyle = PAL.stone;
     ctx.fillRect(x + 2, y + 5, 12, 7);
+    ctx.fillRect(x + 1, y + 6, 14, 5);
+    // Highlight band
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(x + 2, y + 5, 8, 1);
+    ctx.fillRect(x + 2, y + 6, 1, 2);
+    // Shadow + mortar
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(x + 2, y + 11, 12, 1);
+    ctx.fillRect(x + 13, y + 6, 1, 5);
+    // Crack line
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(x + 7, y + 7, 1, 2);
+    // Tiny moss speck
+    ctx.fillStyle = PAL.moss;
+    ctx.fillRect(x + 4 + (seed % 6), y + 10, 1, 1);
 }};
-TILES.wA = { surface: 'water', draw(ctx, x, y) {
+TILES.wA = { surface: 'water', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sea;
     ctx.fillRect(x, y, 16, 16);
-}};
-TILES.wB = { surface: 'water', draw(ctx, x, y) {
-    ctx.fillStyle = PAL.sea;
-    ctx.fillRect(x, y, 16, 16);
+    // Depth gradient — darker band across middle
+    ctx.fillStyle = PAL.seaMd;
+    ctx.fillRect(x, y + 6, 16, 3);
+    // Ripple lines
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(x + 2, y + 3, 4, 1);
+    ctx.fillRect(x + 9, y + 11, 5, 1);
+    // Sparkle pixel
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + (seed % 12) + 2, y + ((seed >> 3) % 12) + 2, 1, 1);
+    // Dark wavelet
     ctx.fillStyle = PAL.seaDk;
-    ctx.fillRect(x + 3, y + 8, 10, 2);
+    ctx.fillRect(x + 3, y + 12, 3, 1);
 }};
-TILES.dA = { surface: 'dirt', draw(ctx, x, y) {
+TILES.wB = { surface: 'water', draw(ctx, x, y, seed) {
+    ctx.fillStyle = PAL.sea;
+    ctx.fillRect(x, y, 16, 16);
+    // Deep middle
+    ctx.fillStyle = PAL.seaMd;
+    ctx.fillRect(x, y + 5, 16, 4);
+    // Ripple lines
+    ctx.fillStyle = PAL.seaDk;
+    ctx.fillRect(x + 3, y + 8, 10, 1);
+    ctx.fillRect(x + 2, y + 13, 5, 1);
+    // Light ripples
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(x + 6, y + 2, 6, 1);
+    ctx.fillRect(x + 1, y + 11, 3, 1);
+    // Sparkle
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + ((seed >> 2) % 12) + 2, y + ((seed >> 5) % 10) + 3, 1, 1);
+}};
+TILES.dA = { surface: 'dirt', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sandDk;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.earth;
+    ctx.fillRect(x + ((seed >> 1) % 13) + 1, y + ((seed >> 4) % 12) + 2, 2, 1);
+    ctx.fillRect(x + ((seed >> 3) % 12) + 2, y + ((seed >> 6) % 13) + 1, 1, 2);
+    ctx.fillStyle = PAL.sandLt;
+    ctx.fillRect(x + ((seed >> 5) % 14) + 1, y + ((seed >> 2) % 13) + 1, 1, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + ((seed >> 7) % 11) + 3, y + ((seed >> 4) % 10) + 3, 1, 1);
 }};
 
 // ---------- Kitchen tiles ----------
-TILES.kfA = { surface: 'tile', draw(ctx, x, y) {
+// Kitchen tiles show as square ceramic tiles with grout lines, a top shine,
+// and occasional scuff / crumb marks.
+TILES.kfA = { surface: 'tile', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.cream;
     ctx.fillRect(x, y, 16, 16);
+    // Subtle top-left shine
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    ctx.fillRect(x + 1, y + 2, 1, 2);
+    // Grout lines (right + bottom)
     ctx.fillStyle = PAL.peach;
     ctx.fillRect(x + 15, y, 1, 16);
     ctx.fillRect(x, y + 15, 16, 1);
+    // Grout shadow (darker inner edge)
+    ctx.fillStyle = PAL.peachDk;
+    ctx.fillRect(x + 14, y + 15, 2, 1);
+    ctx.fillRect(x + 15, y + 14, 1, 2);
+    // Mid-tone soft fill to soften uniformity
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(x + ((seed >> 4) % 11) + 3, y + ((seed >> 2) % 10) + 4, 1, 1);
 }};
-TILES.kfB = { surface: 'tile', draw(ctx, x, y) {
+TILES.kfB = { surface: 'tile', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.cream;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    ctx.fillRect(x + 1, y + 2, 1, 2);
+    // Grout
     ctx.fillStyle = PAL.peach;
     ctx.fillRect(x + 15, y, 1, 16);
     ctx.fillRect(x, y + 15, 16, 1);
-    ctx.fillRect(x + 7, y + 7, 2, 2);
+    ctx.fillStyle = PAL.peachDk;
+    ctx.fillRect(x + 14, y + 15, 2, 1);
+    // Decorative diamond motif
+    ctx.fillStyle = PAL.peach;
+    ctx.fillRect(x + 7, y + 6, 2, 1);
+    ctx.fillRect(x + 6, y + 7, 4, 2);
+    ctx.fillRect(x + 7, y + 9, 2, 1);
+    ctx.fillStyle = PAL.peachDk;
+    ctx.fillRect(x + 7, y + 7, 2, 1);
+    // Scuff dot
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(x + ((seed >> 3) % 12) + 2, y + ((seed >> 5) % 11) + 3, 1, 1);
 }};
-TILES.kfC = { surface: 'tile', draw(ctx, x, y) {
+TILES.kfC = { surface: 'tile', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.cream;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    // Grout
     ctx.fillStyle = PAL.peach;
     ctx.fillRect(x + 15, y, 1, 16);
     ctx.fillRect(x, y + 15, 16, 1);
-    ctx.fillRect(x + 4, y + 4, 1, 1);
+    ctx.fillStyle = PAL.peachDk;
+    ctx.fillRect(x + 15, y + 14, 1, 2);
+    // Tiny crumb / fleck
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + ((seed >> 1) % 12) + 2, y + ((seed >> 4) % 11) + 3, 1, 1);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(x + ((seed >> 2) % 13) + 1, y + ((seed >> 6) % 12) + 2, 1, 1);
+    // Scuff
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(x + ((seed >> 5) % 11) + 3, y + ((seed >> 3) % 10) + 4, 2, 1);
 }};
-TILES.rugA = { surface: 'rug', draw(ctx, x, y) {
+TILES.rugA = { surface: 'rug', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.red;
     ctx.fillRect(x, y, 16, 16);
+    // Weave texture (crosshatch)
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(x + 1, y + 3, 14, 1);
+    ctx.fillRect(x + 1, y + 11, 14, 1);
+    ctx.fillRect(x + 3, y + 1, 1, 14);
+    ctx.fillRect(x + 12, y + 1, 1, 14);
+    // Light weave highlights
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(x + 6, y + 6, 1, 1);
+    ctx.fillRect(x + 9, y + 9, 1, 1);
+    ctx.fillRect(x + 8, y + 3, 1, 1);
+    // Subtle seed-dot pattern
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x + ((seed >> 4) % 10) + 3, y + ((seed >> 2) % 10) + 3, 1, 1);
 }};
-TILES.rugB = { surface: 'rug', draw(ctx, x, y) {
+TILES.rugB = { surface: 'rug', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.red;
     ctx.fillRect(x, y, 16, 16);
+    // Fringed top/bottom border with tassle ticks
     ctx.fillStyle = PAL.yellow;
     ctx.fillRect(x, y, 16, 2);
     ctx.fillRect(x, y + 14, 16, 2);
+    ctx.fillStyle = PAL.yellowLt;
+    ctx.fillRect(x, y, 16, 1);
+    ctx.fillRect(x, y + 14, 16, 1);
+    // Dark border stripe
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(x, y + 2, 16, 1);
+    ctx.fillRect(x, y + 13, 16, 1);
+    // Inner diamond motif
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x + 7, y + 6, 2, 1);
+    ctx.fillRect(x + 6, y + 7, 4, 2);
+    ctx.fillRect(x + 7, y + 9, 2, 1);
+    // Subtle weave dot (seeded)
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(x + ((seed >> 3) % 12) + 2, y + 6 + ((seed >> 5) % 4), 1, 1);
 }};
 
 // ---------- Bedroom tiles ----------
-TILES.bpA = { surface: 'wood', draw(ctx, x, y) {
+// Plank tiles show lavender-tinted wood with grain streaks, knots, and
+// nail-head dots between boards.
+TILES.bpA = { surface: 'wood', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.lav;
     ctx.fillRect(x, y, 16, 16);
+    // Top highlight streak
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(x + 1, y + 1, 14, 1);
+    // Plank seam
     ctx.fillStyle = PAL.lavDk;
     ctx.fillRect(x, y + 15, 16, 1);
+    // Grain streaks (long horizontals)
+    ctx.fillStyle = PAL.lavDk;
+    ctx.fillRect(x + 2, y + 5, 12, 1);
+    ctx.fillRect(x + 4, y + 10, 10, 1);
+    // Light grain between
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(x + 3, y + 8, 9, 1);
+    // Nail head
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 1 + ((seed >> 3) % 13), y + 15, 1, 1);
 }};
 TILES.bpB = { surface: 'wood', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.lav;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(x + 1, y + 1, 14, 1);
     ctx.fillStyle = PAL.lavDk;
     ctx.fillRect(x, y + 15, 16, 1);
+    // Vertical plank seam
     ctx.fillRect(x + (seed % 12) + 2, y, 1, 16);
+    // Grain streaks
+    ctx.fillRect(x + 2, y + 6, 5, 1);
+    ctx.fillRect(x + 8, y + 9, 7, 1);
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(x + 3, y + 3, 4, 1);
+    // Nail heads either side of seam
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + (seed % 12) + 1, y + 2, 1, 1);
+    ctx.fillRect(x + (seed % 12) + 3, y + 13, 1, 1);
 }};
 TILES.bpC = { surface: 'wood', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.lav;
     ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(x + 1, y + 1, 14, 1);
     ctx.fillStyle = PAL.lavDk;
     ctx.fillRect(x, y + 15, 16, 1);
+    // Grain streak (long)
     ctx.fillRect(x + (seed % 8) + 4, y + 3, 1, 10);
+    // Knot circle
+    const kx = x + ((seed >> 4) % 10) + 3;
+    const ky = y + ((seed >> 6) % 8) + 5;
+    ctx.fillStyle = PAL.lavDk;
+    ctx.fillRect(kx, ky, 3, 2);
+    ctx.fillRect(kx + 1, ky - 1, 1, 1);
+    ctx.fillRect(kx + 1, ky + 2, 1, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(kx + 1, ky, 1, 2);
+    // Light edge highlight on knot
+    ctx.fillStyle = PAL.lavLt;
+    ctx.fillRect(kx + 3, ky, 1, 1);
 }};
-TILES.carpA = { surface: 'rug', draw(ctx, x, y) {
+TILES.carpA = { surface: 'rug', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(x, y, 16, 16);
+    // Woven texture
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(x + 2, y + 4, 12, 1);
+    ctx.fillRect(x + 2, y + 11, 12, 1);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(x + 2, y + 3, 12, 1);
+    ctx.fillRect(x + 2, y + 12, 12, 1);
+    // Subtle seed speck
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(x + ((seed >> 2) % 12) + 2, y + 7 + ((seed >> 5) % 3), 1, 1);
 }};
-TILES.carpB = { surface: 'rug', draw(ctx, x, y) {
+TILES.carpB = { surface: 'rug', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(x, y, 16, 16);
+    // Red inner block
     ctx.fillStyle = PAL.red;
     ctx.fillRect(x + 2, y + 2, 12, 12);
+    // Inner pink square
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(x + 4, y + 4, 8, 8);
+    // Center diamond
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(x + 7, y + 6, 2, 1);
+    ctx.fillRect(x + 6, y + 7, 4, 2);
+    ctx.fillRect(x + 7, y + 9, 2, 1);
+    // Center highlight
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(x + 7, y + 7, 1, 1);
+    // Corner accents
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(x + 2, y + 2, 1, 1);
+    ctx.fillRect(x + 13, y + 2, 1, 1);
+    ctx.fillRect(x + 2, y + 13, 1, 1);
+    ctx.fillRect(x + 13, y + 13, 1, 1);
+    // Variant dot (seeded)
+    ctx.fillStyle = PAL.yellowLt;
+    ctx.fillRect(x + 4 + ((seed >> 3) % 7), y + 4 + ((seed >> 5) % 7), 1, 1);
 }};
 
 // ---------- Beach tiles ----------
-TILES.seaA = { surface: 'water', draw(ctx, x, y) {
+TILES.seaA = { surface: 'water', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sea;
     ctx.fillRect(x, y, 16, 16);
+    // Depth band
+    ctx.fillStyle = PAL.seaMd;
+    ctx.fillRect(x, y + 6, 16, 3);
+    // Subtle foam/light ripple
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(x + 2, y + 2, 5, 1);
+    ctx.fillRect(x + 9, y + 13, 4, 1);
+    // Sparkle
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + ((seed >> 2) % 13) + 1, y + ((seed >> 5) % 13) + 1, 1, 1);
 }};
-TILES.seaB = { surface: 'water', draw(ctx, x, y) {
+TILES.seaB = { surface: 'water', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sea;
     ctx.fillRect(x, y, 16, 16);
+    // Deeper band
+    ctx.fillStyle = PAL.seaMd;
+    ctx.fillRect(x, y + 5, 16, 4);
+    ctx.fillStyle = PAL.seaDp;
+    ctx.fillRect(x, y + 14, 16, 2);
+    // Animated wave line
     ctx.fillStyle = PAL.seaDk;
     const dy = Math.sin((x + (typeof world !== 'undefined' ? world.sessionTick * 0.8 : 0)) * 0.1) * 2;
     ctx.fillRect(x + 2, y + 12 + dy, 8, 2);
+    // Light foam ripples
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(x + 4, y + 3, 6, 1);
+    ctx.fillRect(x + 11, y + 7, 3, 1);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + ((seed >> 4) % 13) + 1, y + ((seed >> 6) % 5) + 2, 1, 1);
 }};
-TILES.wsA = { surface: 'sand', draw(ctx, x, y) {
+TILES.wsA = { surface: 'sand', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sandDk;
     ctx.fillRect(x, y, 16, 16);
+    // Wet shine
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(x + 2, y + 2, 5, 1);
+    ctx.fillRect(x + 10, y + 5, 4, 1);
+    // Ripple ridges
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(x, y + 8, 16, 1);
+    ctx.fillRect(x, y + 13, 16, 1);
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x, y + 11, 16, 1);
+    // Tiny shell
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + ((seed >> 3) % 12) + 2, y + ((seed >> 6) % 5) + 9, 1, 1);
 }};
-TILES.sA = { surface: 'sand', draw(ctx, x, y) {
+TILES.sA = { surface: 'sand', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sand;
     ctx.fillRect(x, y, 16, 16);
+    // Subtle grains
+    ctx.fillStyle = PAL.sandLt;
+    ctx.fillRect(x + ((seed >> 1) % 14) + 1, y + ((seed >> 4) % 13) + 2, 1, 1);
+    ctx.fillRect(x + ((seed >> 3) % 13) + 2, y + ((seed >> 6) % 14) + 1, 1, 1);
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x + ((seed >> 5) % 12) + 3, y + ((seed >> 2) % 12) + 3, 1, 1);
 }};
 TILES.sB = { surface: 'sand', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sand;
     ctx.fillRect(x, y, 16, 16);
+    // Ripple texture
     ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(x + 1, y + 6, 12, 1);
+    // Grain specks
     ctx.fillRect(x + (seed % 12) + 2, y + (seed % 10) + 3, 1, 1);
+    ctx.fillRect(x + ((seed >> 3) % 13) + 1, y + ((seed >> 5) % 12) + 2, 1, 1);
+    // Tiny shell fragment
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(x + ((seed >> 4) % 10) + 3, y + ((seed >> 2) % 8) + 10, 2, 1);
+    ctx.fillRect(x + ((seed >> 4) % 10) + 4, y + ((seed >> 2) % 8) + 11, 1, 1);
+    // Highlight
+    ctx.fillStyle = PAL.sandLt;
+    ctx.fillRect(x + ((seed >> 6) % 13) + 1, y + ((seed >> 7) % 5) + 1, 1, 1);
 }};
 TILES.sC = { surface: 'sand', draw(ctx, x, y, seed) {
     ctx.fillStyle = PAL.sand;
     ctx.fillRect(x, y, 16, 16);
+    // Grain texture
     ctx.fillStyle = PAL.sandDk;
     ctx.fillRect(x + (seed % 9) + 3, y + (seed % 7) + 4, 1, 1);
     ctx.fillRect(x + ((seed >> 4) % 10) + 2, y + ((seed >> 4) % 8) + 3, 1, 1);
+    ctx.fillRect(x + ((seed >> 2) % 12) + 1, y + ((seed >> 6) % 10) + 5, 1, 1);
+    // Highlight speck
+    ctx.fillStyle = PAL.sandLt;
+    ctx.fillRect(x + ((seed >> 1) % 13) + 1, y + ((seed >> 5) % 13) + 1, 1, 1);
+    // Tiny shadow mark
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(x + ((seed >> 7) % 11) + 3, y + ((seed >> 3) % 12) + 2, 1, 1);
+    // Optional shell speckle
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(x + ((seed >> 5) % 12) + 2, y + ((seed >> 4) % 12) + 2, 1, 1);
 }};
-TILES.rkA = { surface: 'stone', draw(ctx, x, y) {
+TILES.rkA = { surface: 'stone', draw(ctx, x, y, seed) {
+    // Sand backdrop
     ctx.fillStyle = PAL.sand;
     ctx.fillRect(x, y, 16, 16);
+    // Subtle shadow under rock
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(x + 2, y + 13, 12, 1);
+    // Rock body
     ctx.fillStyle = PAL.stone;
     ctx.fillRect(x + 1, y + 3, 14, 10);
+    // Rounded corners
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(x + 1, y + 3, 1, 1);
+    ctx.fillRect(x + 14, y + 3, 1, 1);
+    ctx.fillRect(x + 1, y + 12, 1, 1);
+    ctx.fillRect(x + 14, y + 12, 1, 1);
+    // Top highlight
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(x + 2, y + 4, 8, 1);
+    ctx.fillRect(x + 2, y + 5, 1, 2);
+    // Crack line
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(x + 5, y + 7, 4, 1);
+    ctx.fillRect(x + 8, y + 8, 1, 2);
+    // Shadow band at bottom
+    ctx.fillRect(x + 1, y + 11, 14, 1);
+    // Outline
     ctx.fillStyle = PAL.outline;
-    ctx.fillRect(x + 1, y + 3, 14, 1);
-    ctx.fillRect(x + 1, y + 12, 14, 1);
+    ctx.fillRect(x + 2, y + 3, 12, 1);
+    ctx.fillRect(x + 2, y + 12, 12, 1);
+    ctx.fillRect(x + 1, y + 4, 1, 8);
+    ctx.fillRect(x + 14, y + 4, 1, 8);
+    // Lichen spot
+    ctx.fillStyle = PAL.moss;
+    ctx.fillRect(x + 10 + ((seed >> 4) % 3), y + 6, 2, 1);
 }};
 
 // ---------- Decoration tiles ----------
+// Each flower variant has a recognizable 5-petal silhouette plus stem and
+// leaf. Pixel layout (petals around `dx,dy` center):
+//
+//     . P .
+//     P C P
+//     . P .
+//     . S .
+//     L S .
+//
+// where P = petal, C = center, S = stem, L = leaf. A secondary tint pixel
+// inside the petal ring adds dimensionality.
 TILES.flW = { surface: 'grass', draw(ctx, x, y, seed) {
-    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
+    const dx = x + (seed % 9) + 4, dy = y + ((seed >> 3) % 8) + 4;
+    // Stem
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(dx, dy + 2, 1, 4);
+    // Leaf
+    ctx.fillStyle = PAL.mintDk;
+    ctx.fillRect(dx - 1, dy + 4, 1, 1);
+    ctx.fillRect(dx - 2, dy + 5, 2, 1);
+    // Petals (white)
     ctx.fillStyle = PAL.white;
-    ctx.fillRect(dx, dy, 1, 1);
-    ctx.fillRect(dx + 1, dy - 1, 1, 1);
-    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    ctx.fillRect(dx - 1, dy - 1, 3, 3);
     ctx.fillRect(dx, dy - 2, 1, 1);
-}};
-TILES.flP = { surface: 'grass', draw(ctx, x, y, seed) {
-    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
-    ctx.fillStyle = PAL.pink;
-    ctx.fillRect(dx, dy, 1, 1);
-    ctx.fillRect(dx + 1, dy - 1, 1, 1);
-    ctx.fillRect(dx - 1, dy - 1, 1, 1);
-    ctx.fillRect(dx, dy - 2, 1, 1);
-}};
-TILES.flY = { surface: 'grass', draw(ctx, x, y, seed) {
-    const dx = x + (seed % 10) + 3, dy = y + (seed % 10) + 3;
+    ctx.fillRect(dx, dy + 2, 1, 1);
+    ctx.fillRect(dx - 2, dy, 1, 1);
+    ctx.fillRect(dx + 2, dy, 1, 1);
+    // Petal shading
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(dx + 1, dy + 1, 1, 1);
+    // Center
     ctx.fillStyle = PAL.yellow;
     ctx.fillRect(dx, dy, 1, 1);
-    ctx.fillRect(dx + 1, dy - 1, 1, 1);
+}};
+TILES.flP = { surface: 'grass', draw(ctx, x, y, seed) {
+    const dx = x + (seed % 9) + 4, dy = y + ((seed >> 3) % 8) + 4;
+    // Stem + leaf
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(dx, dy + 2, 1, 4);
+    ctx.fillStyle = PAL.mintDk;
+    ctx.fillRect(dx + 1, dy + 3, 1, 1);
+    ctx.fillRect(dx + 1, dy + 4, 2, 1);
+    // Petals (pink)
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(dx - 1, dy - 1, 3, 3);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+    ctx.fillRect(dx, dy + 2, 1, 1);
+    ctx.fillRect(dx - 2, dy, 1, 1);
+    ctx.fillRect(dx + 2, dy, 1, 1);
+    // Deeper shading
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(dx + 1, dy + 1, 1, 1);
+    ctx.fillRect(dx + 2, dy, 1, 1);
+    // Highlight
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(dx - 1, dy - 1, 1, 1);
+    // Center
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(dx, dy, 1, 1);
+}};
+TILES.flY = { surface: 'grass', draw(ctx, x, y, seed) {
+    const dx = x + (seed % 9) + 4, dy = y + ((seed >> 3) % 8) + 4;
+    // Stem + leaf
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(dx, dy + 2, 1, 4);
+    ctx.fillStyle = PAL.mintDk;
+    ctx.fillRect(dx - 1, dy + 3, 1, 1);
+    ctx.fillRect(dx - 2, dy + 4, 2, 1);
+    // Petals (yellow)
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(dx - 1, dy - 1, 3, 3);
+    ctx.fillRect(dx, dy - 2, 1, 1);
+    ctx.fillRect(dx, dy + 2, 1, 1);
+    ctx.fillRect(dx - 2, dy, 1, 1);
+    ctx.fillRect(dx + 2, dy, 1, 1);
+    // Highlight petal
+    ctx.fillStyle = PAL.yellowLt;
     ctx.fillRect(dx - 1, dy - 1, 1, 1);
     ctx.fillRect(dx, dy - 2, 1, 1);
+    // Shadow petal
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(dx + 1, dy + 1, 1, 1);
+    // Center
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(dx, dy, 1, 1);
 }};
-TILES.bushS = { surface: 'grass', draw(ctx, x, y) {
+TILES.bushS = { surface: 'grass', draw(ctx, x, y, seed) {
+    // Shadow on ground
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(x + 3, y + 12, 10, 1);
+    // Outer dark layer (irregular lobes)
     ctx.fillStyle = PAL.mintDp;
-    ctx.fillRect(x + 2, y + 4, 12, 8);
+    ctx.fillRect(x + 2, y + 5, 12, 7);
+    ctx.fillRect(x + 3, y + 4, 10, 1);
+    ctx.fillRect(x + 1, y + 6, 1, 4);
+    ctx.fillRect(x + 14, y + 6, 1, 4);
+    ctx.fillRect(x + 4, y + 3, 3, 1);
+    ctx.fillRect(x + 9, y + 3, 3, 1);
+    // Mid green
     ctx.fillStyle = PAL.grassDk;
     ctx.fillRect(x + 3, y + 5, 10, 6);
+    // Leaf cluster bumps (highlight on top-left)
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(x + 4, y + 5, 3, 2);
+    ctx.fillRect(x + 9, y + 6, 3, 2);
+    ctx.fillRect(x + 5, y + 8, 2, 1);
+    // Brightest tips
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x + 5, y + 5, 1, 1);
+    ctx.fillRect(x + 10, y + 6, 1, 1);
+    // Berry clusters
+    ctx.fillStyle = PAL.berry;
+    ctx.fillRect(x + 6 + ((seed >> 2) % 2), y + 7, 1, 1);
+    ctx.fillRect(x + 11, y + 9, 1, 1);
     ctx.fillStyle = PAL.pink;
-    ctx.fillRect(x + 6, y + 6, 1, 1);
-    ctx.fillRect(x + 10, y + 8, 1, 1);
+    ctx.fillRect(x + 6 + ((seed >> 2) % 2), y + 7, 1, 1);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(x + 11, y + 9, 1, 1);
+    // Occasional tiny flower (seeded variant)
+    if ((seed & 7) === 0) {
+        ctx.fillStyle = PAL.white;
+        ctx.fillRect(x + 4, y + 9, 1, 1);
+        ctx.fillStyle = PAL.yellow;
+        ctx.fillRect(x + 4, y + 9, 1, 1);
+    }
 }};
 TILES.mholeA = { surface: 'tile', draw(ctx, x, y) {
+    // Arched hole shape with outline and shadow
     ctx.fillStyle = PAL.outline;
-    ctx.fillRect(x + 2, y + 4, 12, 8);
+    ctx.fillRect(x + 2, y + 5, 12, 7);
+    ctx.fillRect(x + 3, y + 4, 10, 1);
+    ctx.fillRect(x + 4, y + 3, 8, 1);
+    // Interior darkness
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(x + 3, y + 6, 10, 5);
+    ctx.fillRect(x + 4, y + 5, 8, 1);
+    // Floor edge inside hole
     ctx.fillStyle = PAL.woodDk;
-    ctx.fillRect(x + 3, y + 5, 10, 5);
+    ctx.fillRect(x + 3, y + 10, 10, 1);
+    // Wood frame edge
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(x + 2, y + 11, 1, 1);
+    ctx.fillRect(x + 13, y + 11, 1, 1);
+    // Tiny highlight on arch top
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(x + 5, y + 3, 3, 1);
 }};
 
 // ---------- Overlay tiles ----------
-TILES.treeFoliage = { surface: 'grass', draw(ctx, x, y) {
+// Tree foliage seen top-down with leaf cluster bumps, shadow gutter,
+// central trunk hint, and light/shadow shading.
+TILES.treeFoliage = { surface: 'grass', draw(ctx, x, y, seed) {
+    // Base dark canopy layer
     ctx.fillStyle = PAL.mintDp;
     ctx.fillRect(x, y + 2, 16, 14);
+    ctx.fillRect(x + 1, y + 1, 14, 1);
+    // Mid green
     ctx.fillStyle = PAL.grassDk;
     ctx.fillRect(x + 1, y + 3, 14, 12);
+    ctx.fillRect(x + 2, y + 2, 12, 1);
+    // Leaf clusters (light green bumps)
     ctx.fillStyle = PAL.grass;
-    ctx.fillRect(x + 2, y + 4, 10, 8);
+    ctx.fillRect(x + 2, y + 4, 3, 2);
+    ctx.fillRect(x + 6, y + 3, 3, 2);
+    ctx.fillRect(x + 10, y + 4, 3, 2);
+    ctx.fillRect(x + 3, y + 7, 2, 2);
+    ctx.fillRect(x + 11, y + 7, 2, 2);
+    ctx.fillRect(x + 6, y + 9, 4, 2);
+    // Brightest highlights
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x + 3, y + 4, 1, 1);
+    ctx.fillRect(x + 7, y + 3, 1, 1);
+    ctx.fillRect(x + 11, y + 4, 1, 1);
+    // Shadow underside
+    ctx.fillStyle = PAL.mintDp;
+    ctx.fillRect(x + 2, y + 13, 12, 2);
+    ctx.fillRect(x + 3, y + 15, 10, 1);
+    // Trunk hint (visible through canopy)
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(x + 7, y + 7, 2, 2);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(x + 7, y + 7, 1, 1);
+    // Leaf-edge silhouette on seeded tile (subtle variety)
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(x + ((seed >> 3) % 13) + 1, y + 13, 1, 1);
 }};
 
 // ==================== TILE MAPS ====================
@@ -698,11 +1223,14 @@ const KITTEN_PAL = [
     null,           // 0 = transparent
     PAL.cream,      // 1 = body
     PAL.outline,    // 2 = dark brown outlines
-    PAL.pink,       // 3 = inner ear, blush
+    PAL.pink,       // 3 = inner ear (saturated pink)
     PAL.eye,        // 4 = dark eyes
-    '#fffdf7',      // 5 = highlight (top of head)
-    '#ede0d0',      // 6 = shadow (bottom)
+    '#fffdf7',      // 5 = highlight (top of head / ear tuft)
+    '#ede0d0',      // 6 = shadow (bottom body)
     PAL.pinkDk,     // 7 = nose, mouth
+    '#ffffff',      // 8 = eye catch-light (pure white sparkle)
+    '#d4bfa8',      // 9 = deep shadow (under belly / tail curl)
+    '#ffd4d8',      // a = cheek blush (warm pink)
 ];
 
 SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
@@ -715,9 +1243,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -742,9 +1270,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -769,9 +1297,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -876,9 +1404,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '......251152222.........',
         '.....2211111112.........',
         '.....2111111112.........',
-        '.....2551114112.........',
+        '.....2551184112.........',
         '.....2111117112.........',
-        '.....2113117712.........',
+        '.....211a117712.........',
         '.....211112222..........',
         '.....221111126..........',
         '......222222262.........',
@@ -903,9 +1431,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '......251152222.........',
         '.....2211111112.........',
         '.....2111111112.........',
-        '.....2551114112.........',
+        '.....2551184112.........',
         '.....2111117112.........',
-        '.....2113117712.........',
+        '.....211a117712.........',
         '.....211112222..........',
         '.....221111126..........',
         '......222222262.........',
@@ -930,9 +1458,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '......251152222.........',
         '.....2211111112.........',
         '.....2111111112.........',
-        '.....2551114112.........',
+        '.....2551184112.........',
         '.....2111117112.........',
-        '.....2113117712.........',
+        '.....211a117712.........',
         '.....211112222..........',
         '.....221111126..........',
         '......222222262.........',
@@ -958,9 +1486,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '..222222222222222262....',
@@ -985,9 +1513,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1012,9 +1540,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1097,9 +1625,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1125,9 +1653,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1153,9 +1681,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1176,7 +1704,7 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..25511111111111152.....',
         '..21122111111221112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1201,9 +1729,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '.22111122221111122......',
         '.21111111111111112......',
         '.25511111111111152......',
-        '.21144111111441112......',
+        '.21184111111841112......',
         '.21111111111111112......',
-        '.21131117711131112......',
+        '.211a1117711a11112......',
         '.2111122..221111126....',
         '.22111111111111226......',
         '..2222222222222262......',
@@ -1227,9 +1755,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -1255,9 +1783,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '...22111122221111122....',
         '...21111111111111112....',
         '...25511111111111152....',
-        '...21144111111441112....',
+        '...21184111111841112....',
         '...21111111111111112....',
-        '...21131117711131112....',
+        '...211a1117711a11112....',
         '...2111122..221111126..',
         '...22111111111111226....',
         '....2222222222222262....',
@@ -1281,9 +1809,9 @@ SPRITES.kitten = defineSprite(24, 24, KITTEN_PAL, [
         '..22111122221111122.....',
         '..21111111111111112.....',
         '..25511111111111152.....',
-        '..21144111111441112.....',
+        '..21184111111841112.....',
         '..21111111111111112.....',
-        '..21131117711131112.....',
+        '..211a1117711a11112.....',
         '..2111122..221111126...',
         '..22111111111111226.....',
         '...2222222222222262.....',
@@ -2082,22 +2610,40 @@ function drawFloaters(ctx) {
 // ==================== SHELF ====================
 
 function drawShelf(ctx) {
-    // Backdrop
+    // Backdrop gradient (lav → pink)
     const g = ctx.createLinearGradient(0, 0, 0, SHELF_H);
     g.addColorStop(0, PAL.lav);
     g.addColorStop(1, PAL.pink);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, GAME.width, SHELF_H);
 
-    // Bottom shelf plank
+    // Bottom shelf plank — layered with grain
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(0, SHELF_H - 5, GAME.width, 5);
     ctx.fillStyle = PAL.wood;
     ctx.fillRect(0, SHELF_H - 4, GAME.width, 3);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(0, SHELF_H - 4, GAME.width, 1);    // top highlight
+    // Wood grain streaks across plank
     ctx.fillStyle = PAL.woodDk;
+    for (let gx = 8; gx < GAME.width; gx += 40) {
+        ctx.fillRect(gx, SHELF_H - 3, 14, 1);
+    }
+    for (let gx = 30; gx < GAME.width; gx += 48) {
+        ctx.fillRect(gx, SHELF_H - 2, 10, 1);
+    }
+    // Plank knots
+    ctx.fillStyle = PAL.woodDp;
+    for (let gx = 60; gx < GAME.width; gx += 96) {
+        ctx.fillRect(gx, SHELF_H - 3, 2, 2);
+        ctx.fillRect(gx + 1, SHELF_H - 4, 1, 1);
+    }
+    // Dark bottom line
+    ctx.fillStyle = PAL.woodDp;
     ctx.fillRect(0, SHELF_H - 1, GAME.width, 1);
-
-    // Outline divider
+    // Outline divider above plank
     ctx.fillStyle = PAL.outline;
-    ctx.fillRect(0, SHELF_H - 5, GAME.width, 1);
+    ctx.fillRect(0, SHELF_H - 6, GAME.width, 1);
 
     // Bins: flowers | butterflies | shells | yarn | stars | treats
     const bins = [
@@ -2113,14 +2659,23 @@ function drawShelf(ctx) {
     const available = GAME.width - pad * 2;
     let xCursor = pad;
     const totalCount = bins.reduce((s, b) => s + b.count, 0);
-    // Each slot ~11px wide
     const slotW = Math.floor((available - (bins.length - 1) * 4) / totalCount);
 
     for (const bin of bins) {
         const binW = slotW * bin.count;
-        // Bin outline
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.fillRect(xCursor - 1, 3, binW + 2, SHELF_H - 9);
+        // Bin back panel (soft cream with shadow bottom)
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(xCursor - 1, 3, binW + 2, SHELF_H - 10);
+        ctx.fillStyle = 'rgba(90,64,51,0.12)';
+        ctx.fillRect(xCursor - 1, SHELF_H - 8, binW + 2, 1);
+        // Bin top highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillRect(xCursor - 1, 3, binW + 2, 1);
+        // Bin side borders (subtle)
+        ctx.fillStyle = 'rgba(90,64,51,0.25)';
+        ctx.fillRect(xCursor - 1, 3, 1, SHELF_H - 10);
+        ctx.fillRect(xCursor + binW, 3, 1, SHELF_H - 10);
+
         for (let i = 0; i < bin.count; i++) {
             const ix = xCursor + i * slotW + Math.floor(slotW / 2) - 4;
             const iy = 10;
@@ -2629,6 +3184,9 @@ function drawGarden(ctx) {
     drawTileLayer(ctx, room.map, 'ground');
     drawTileLayer(ctx, room.map, 'decoration');
 
+    // Decorative props (purely visual, no collision)
+    drawGardenDeco(ctx);
+
     // Trees (trunks/shadows — foliage drawn in overlay after kitten)
     drawTree(ctx, 30, 70);
     drawTree(ctx, 350, 80);
@@ -2689,6 +3247,9 @@ function drawKitchen(ctx) {
     drawTileLayer(ctx, room.map, 'ground');
     drawTileLayer(ctx, room.map, 'decoration');
 
+    // Decorative props
+    drawKitchenDeco(ctx);
+
     // Mouse hole — round hole on the floor (drawn on top for smooth ellipse)
     ctx.fillStyle = PAL.outline;
     ctx.beginPath();
@@ -2739,6 +3300,9 @@ function drawBedroom(ctx) {
     drawTileLayer(ctx, room.map, 'ground');
     drawTileLayer(ctx, room.map, 'decoration');
 
+    // Decorative props
+    drawBedroomDeco(ctx);
+
     // Cozy oval rug in the center (smooth ellipse on top of tiles)
     ctx.fillStyle = PAL.pink;
     ctx.beginPath();
@@ -2782,6 +3346,9 @@ function drawBeach(ctx) {
     drawTileLayer(ctx, room.map, 'ground');
     drawTileLayer(ctx, room.map, 'decoration');
 
+    // Decorative props
+    drawBeachDeco(ctx);
+
     // Ambient effects
     const s = room.ambientState;
     if (s) {
@@ -2819,93 +3386,772 @@ function drawBeach(ctx) {
     }
 }
 
+// ==================== ROOM DECORATIONS ====================
+// Purely visual props — no hit-box, no collision. Placed in corners and
+// edges to avoid the kitten's main walking zones.
+
+function drawGardenDeco(ctx) {
+    // Wooden signpost (top-right, near but not overlapping trees)
+    const sx = 362, sy = 48;
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(sx, sy, 2, 10);            // post
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(sx - 5, sy + 1, 12, 5);    // sign plank
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(sx - 5, sy + 1, 12, 1);    // top edge
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(sx - 4, sy + 2, 10, 1);    // highlight
+    ctx.fillStyle = PAL.pink;                // tiny heart on the sign
+    ctx.fillRect(sx - 1, sy + 3, 1, 1);
+    ctx.fillRect(sx + 1, sy + 3, 1, 1);
+    ctx.fillRect(sx, sy + 4, 2, 1);
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(sx - 2, sy + 10, 6, 1);    // ground shadow
+
+    // Watering can near bottom edge (left-mid)
+    const wx = 155, wy = 128;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(wx + 1, wy + 8, 10, 1);
+    ctx.fillStyle = PAL.sky;                 // can body
+    ctx.fillRect(wx, wy + 2, 10, 6);
+    ctx.fillStyle = PAL.skyLt;
+    ctx.fillRect(wx, wy + 2, 2, 5);          // left highlight
+    ctx.fillStyle = PAL.skyDk;
+    ctx.fillRect(wx, wy + 7, 10, 1);         // base shadow
+    ctx.fillStyle = PAL.skyDk;
+    ctx.fillRect(wx + 1, wy + 1, 2, 1);      // opening rim
+    ctx.fillRect(wx + 10, wy + 3, 3, 1);     // spout
+    ctx.fillRect(wx + 12, wy + 4, 1, 1);
+    ctx.fillStyle = PAL.sky;
+    ctx.fillRect(wx + 10, wy + 4, 3, 1);
+    // Handle arch (3 pixel dots)
+    ctx.fillStyle = PAL.skyDk;
+    ctx.fillRect(wx + 2, wy, 1, 1);
+    ctx.fillRect(wx + 3, wy, 2, 1);
+    ctx.fillRect(wx + 5, wy + 1, 1, 1);
+    ctx.fillRect(wx + 1, wy + 1, 1, 1);
+
+    // Rock garden cluster (top-center, between trees)
+    const rx = 240, ry = 58;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(rx, ry + 6, 18, 1);
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(rx, ry + 2, 6, 5);
+    ctx.fillRect(rx + 7, ry, 5, 7);
+    ctx.fillRect(rx + 13, ry + 3, 5, 4);
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(rx, ry + 2, 5, 1);
+    ctx.fillRect(rx + 7, ry, 4, 1);
+    ctx.fillRect(rx + 13, ry + 3, 4, 1);
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(rx, ry + 6, 6, 1);
+    ctx.fillRect(rx + 7, ry + 6, 5, 1);
+    ctx.fillRect(rx + 13, ry + 6, 5, 1);
+    // Moss on rocks
+    ctx.fillStyle = PAL.moss;
+    ctx.fillRect(rx + 2, ry + 4, 1, 1);
+    ctx.fillRect(rx + 9, ry + 2, 1, 1);
+
+    // Mushroom cluster (bottom-right edge)
+    const mx = 355, my = 185;
+    // Shadow
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(mx - 1, my + 6, 10, 1);
+    // Big mushroom
+    ctx.fillStyle = PAL.cream;               // stem
+    ctx.fillRect(mx + 1, my + 3, 2, 4);
+    ctx.fillStyle = PAL.red;                 // cap
+    ctx.fillRect(mx, my + 1, 4, 3);
+    ctx.fillRect(mx + 1, my, 2, 1);
+    ctx.fillStyle = PAL.redDk;               // cap shadow
+    ctx.fillRect(mx, my + 3, 4, 1);
+    ctx.fillStyle = PAL.white;               // spots
+    ctx.fillRect(mx + 1, my + 2, 1, 1);
+    ctx.fillRect(mx + 2, my + 1, 1, 1);
+    // Small mushroom
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(mx + 6, my + 4, 1, 2);
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(mx + 5, my + 3, 3, 2);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(mx + 6, my + 3, 1, 1);
+
+    // Scattered fallen leaves
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(150, 95, 2, 1);
+    ctx.fillRect(151, 96, 1, 1);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(220, 180, 2, 1);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(300, 170, 1, 2);
+}
+
+function drawKitchenDeco(ctx) {
+    // Wall clock (top-center)
+    const cx = 180, cy = 34;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(cx - 5, cy + 11, 12, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(cx - 6, cy, 13, 11);        // outer frame
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(cx - 5, cy + 1, 11, 9);     // face
+    ctx.fillStyle = PAL.woodDk;              // numeral ticks
+    ctx.fillRect(cx, cy + 1, 1, 1);
+    ctx.fillRect(cx, cy + 9, 1, 1);
+    ctx.fillRect(cx - 5, cy + 5, 1, 1);
+    ctx.fillRect(cx + 5, cy + 5, 1, 1);
+    // Hands pointing up-right (like 2 o'clock)
+    ctx.fillRect(cx, cy + 5, 1, 1);
+    ctx.fillRect(cx + 1, cy + 4, 1, 1);
+    ctx.fillRect(cx, cy + 4, 1, 1);
+    ctx.fillRect(cx - 1, cy + 5, 1, 1);
+    ctx.fillRect(cx, cy + 6, 1, 1);
+    // Pendulum
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(cx, cy + 11, 1, 3);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(cx - 1, cy + 14, 3, 2);
+
+    // Small table with teacup (top-left area)
+    const tx = 30, ty = 50;
+    // Table shadow
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(tx - 1, ty + 12, 18, 1);
+    // Table legs
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(tx + 1, ty + 6, 2, 6);
+    ctx.fillRect(tx + 13, ty + 6, 2, 6);
+    // Tabletop
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(tx, ty + 4, 16, 3);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(tx, ty + 4, 16, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(tx, ty + 6, 16, 1);
+    // Teacup on table
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(tx + 3, ty, 4, 4);
+    ctx.fillStyle = PAL.creamDk;             // shadow side
+    ctx.fillRect(tx + 6, ty + 1, 1, 3);
+    // Saucer
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(tx + 2, ty + 3, 6, 1);
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(tx + 2, ty + 4, 6, 1);
+    // Tea (dark liquid on top)
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(tx + 4, ty + 1, 2, 1);
+    // Handle
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(tx + 7, ty + 1, 1, 2);
+    // Steam (subtle)
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(tx + 5, ty - 2, 1, 1);
+    ctx.fillRect(tx + 4, ty - 3, 1, 1);
+    // Second saucer item: spoon
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(tx + 9, ty + 3, 3, 1);
+    ctx.fillRect(tx + 12, ty + 3, 1, 2);
+
+    // Potted plant (top-right)
+    const px = 340, py = 40;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(px + 1, py + 14, 10, 1);
+    // Pot
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(px, py + 8, 12, 6);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(px + 1, py + 9, 10, 4);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(px, py + 7, 12, 2);         // rim
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(px + 1, py + 7, 10, 1);     // rim highlight
+    // Plant leaves
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(px + 2, py + 2, 2, 5);
+    ctx.fillRect(px + 6, py, 2, 7);
+    ctx.fillRect(px + 9, py + 2, 2, 5);
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(px + 2, py + 2, 1, 3);
+    ctx.fillRect(px + 6, py, 1, 4);
+    ctx.fillRect(px + 9, py + 2, 1, 3);
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(px + 6, py, 1, 1);
+    // Flower bud
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(px + 5, py + 1, 1, 1);
+
+    // Jar shelf (right wall)
+    const jx = 340, jy = 100;
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(jx - 2, jy + 8, 18, 2);     // shelf plank
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(jx - 2, jy + 8, 18, 1);
+    // Jar 1 (honey)
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(jx, jy + 3, 3, 5);
+    ctx.fillStyle = PAL.yellowLt;
+    ctx.fillRect(jx, jy + 3, 1, 4);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(jx, jy + 2, 3, 1);
+    // Jar 2 (pink jam)
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(jx + 5, jy + 3, 3, 5);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(jx + 5, jy + 3, 1, 4);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(jx + 5, jy + 2, 3, 1);
+    // Jar 3 (green herbs)
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(jx + 10, jy + 3, 3, 5);
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(jx + 10, jy + 3, 1, 4);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(jx + 10, jy + 2, 3, 1);
+
+    // Door mat (bottom-left entry)
+    const mx = 20, my = 190;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(mx, my + 4, 22, 1);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(mx, my, 22, 4);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(mx, my, 22, 1);
+    ctx.fillRect(mx, my + 3, 22, 1);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(mx, my + 2, 22, 1);
+    // Text-like accent
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(mx + 9, my + 1, 1, 1);
+    ctx.fillRect(mx + 11, my + 1, 1, 1);
+    ctx.fillRect(mx + 13, my + 1, 1, 1);
+}
+
+function drawBedroomDeco(ctx) {
+    // Nightstand with lamp (next to bed on left side)
+    const nx = 220, ny = 130;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(nx, ny + 20, 20, 1);
+    // Nightstand body
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(nx, ny + 8, 20, 12);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(nx + 1, ny + 9, 18, 10);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(nx + 1, ny + 9, 18, 1);
+    // Drawer line
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(nx + 1, ny + 14, 18, 1);
+    // Drawer handle
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(nx + 9, ny + 11, 2, 1);
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(nx + 9, ny + 12, 2, 1);
+    // Lamp base
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(nx + 7, ny + 6, 6, 2);
+    // Lamp post
+    ctx.fillStyle = PAL.outline;
+    ctx.fillRect(nx + 9, ny, 2, 6);
+    // Lamp shade
+    ctx.fillStyle = PAL.yellowLt;
+    ctx.fillRect(nx + 5, ny - 4, 10, 5);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(nx + 5, ny - 4, 10, 1);
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(nx + 5, ny + 1, 10, 1);
+    // Warm light halo
+    ctx.fillStyle = 'rgba(255,224,122,0.12)';
+    ctx.fillRect(nx - 5, ny - 8, 30, 20);
+
+    // Picture frame on wall (top-left above toy box)
+    const fx = 80, fy = 40;
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(fx, fy, 24, 14);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(fx + 1, fy + 1, 22, 12);
+    ctx.fillStyle = PAL.sky;                 // sky in picture
+    ctx.fillRect(fx + 2, fy + 2, 20, 6);
+    ctx.fillStyle = PAL.grass;               // grass in picture
+    ctx.fillRect(fx + 2, fy + 8, 20, 4);
+    ctx.fillStyle = PAL.white;               // sun
+    ctx.fillRect(fx + 18, fy + 3, 2, 2);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(fx + 19, fy + 3, 1, 1);
+    // Tiny flower in picture
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(fx + 6, fy + 9, 1, 1);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(fx + 6, fy + 10, 1, 1);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(fx + 6, fy + 11, 1, 1);
+    // Frame shadow
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(fx + 1, fy + 14, 24, 1);
+
+    // Scattered toy blocks (left area)
+    const bx = 80, by = 105;
+    // Block 1 (blue)
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(bx - 1, by + 8, 6, 1);
+    ctx.fillStyle = PAL.blue;
+    ctx.fillRect(bx, by + 2, 6, 6);
+    ctx.fillStyle = PAL.skyLt;
+    ctx.fillRect(bx, by + 2, 6, 1);
+    ctx.fillRect(bx, by + 2, 1, 6);
+    ctx.fillStyle = PAL.skyDk;
+    ctx.fillRect(bx, by + 7, 6, 1);
+    ctx.fillStyle = PAL.white;               // letter A
+    ctx.fillRect(bx + 2, by + 4, 2, 1);
+    ctx.fillRect(bx + 2, by + 4, 1, 3);
+    ctx.fillRect(bx + 3, by + 4, 1, 3);
+    // Block 2 (red, rotated feel)
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(bx + 6, by + 10, 6, 1);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(bx + 7, by + 4, 6, 6);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(bx + 7, by + 4, 6, 1);
+    ctx.fillRect(bx + 7, by + 4, 1, 6);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(bx + 7, by + 9, 6, 1);
+    ctx.fillStyle = PAL.white;               // number 1
+    ctx.fillRect(bx + 9, by + 5, 1, 4);
+    ctx.fillRect(bx + 8, by + 6, 1, 1);
+
+    // Small bookshelf (middle-top)
+    const skx = 150, sky = 45;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(skx + 1, sky + 22, 20, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(skx, sky, 22, 22);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(skx + 1, sky + 1, 20, 20);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(skx + 1, sky + 10, 20, 1);  // shelf divider
+    // Books (top shelf)
+    ctx.fillStyle = PAL.blue;
+    ctx.fillRect(skx + 2, sky + 2, 2, 8);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(skx + 5, sky + 3, 2, 7);
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(skx + 8, sky + 2, 2, 8);
+    ctx.fillStyle = PAL.purple;
+    ctx.fillRect(skx + 11, sky + 3, 2, 7);
+    ctx.fillStyle = PAL.orange;
+    ctx.fillRect(skx + 14, sky + 2, 2, 8);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(skx + 17, sky + 3, 2, 7);
+    // Books (bottom shelf)
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(skx + 2, sky + 12, 2, 8);
+    ctx.fillStyle = PAL.sky;
+    ctx.fillRect(skx + 5, sky + 13, 2, 7);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(skx + 8, sky + 12, 2, 8);
+    // Book page highlights
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(skx + 4, sky + 3, 1, 7);
+    ctx.fillRect(skx + 10, sky + 2, 1, 8);
+    ctx.fillRect(skx + 16, sky + 2, 1, 8);
+
+    // Stuffed animal in corner (teddy)
+    const tdx = 28, tdy = 180;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(tdx, tdy + 8, 10, 1);
+    // Body
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(tdx + 1, tdy + 2, 8, 6);
+    // Head
+    ctx.fillRect(tdx + 2, tdy - 2, 6, 5);
+    // Ears
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(tdx + 2, tdy - 3, 2, 2);
+    ctx.fillRect(tdx + 6, tdy - 3, 2, 2);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(tdx + 2, tdy - 2, 1, 1);
+    ctx.fillRect(tdx + 7, tdy - 2, 1, 1);
+    // Eyes + nose
+    ctx.fillStyle = PAL.eye;
+    ctx.fillRect(tdx + 3, tdy, 1, 1);
+    ctx.fillRect(tdx + 6, tdy, 1, 1);
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(tdx + 4, tdy + 1, 2, 1);
+    // Belly highlight
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(tdx + 3, tdy + 3, 4, 2);
+    // Bow tie
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(tdx + 3, tdy + 2, 4, 1);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(tdx + 4, tdy + 2, 1, 1);
+}
+
+function drawBeachDeco(ctx) {
+    // Sandcastle (right-mid)
+    const sx = 295, sy = 150;
+    // Shadow
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(sx - 2, sy + 22, 24, 1);
+    // Base
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(sx, sy + 14, 20, 8);
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(sx, sy + 21, 20, 1);
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(sx, sy + 14, 20, 1);
+    // Left tower
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(sx, sy + 8, 6, 8);
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(sx, sy + 8, 1, 8);
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(sx + 5, sy + 8, 1, 8);
+    // Middle tall tower
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(sx + 7, sy + 4, 6, 12);
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(sx + 7, sy + 4, 1, 12);
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(sx + 12, sy + 4, 1, 12);
+    // Right tower
+    ctx.fillStyle = PAL.sandDk;
+    ctx.fillRect(sx + 14, sy + 8, 6, 8);
+    ctx.fillStyle = PAL.sand;
+    ctx.fillRect(sx + 14, sy + 8, 1, 8);
+    // Crenellations (notches on top)
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(sx + 1, sy + 8, 1, 1);
+    ctx.fillRect(sx + 3, sy + 8, 1, 1);
+    ctx.fillRect(sx + 8, sy + 4, 1, 1);
+    ctx.fillRect(sx + 10, sy + 4, 1, 1);
+    ctx.fillRect(sx + 12, sy + 4, 1, 1);
+    ctx.fillRect(sx + 15, sy + 8, 1, 1);
+    ctx.fillRect(sx + 17, sy + 8, 1, 1);
+    // Door on middle tower
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(sx + 9, sy + 12, 2, 4);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(sx + 9, sy + 12, 2, 1);
+    // Flag on tallest tower
+    ctx.fillStyle = PAL.outline;
+    ctx.fillRect(sx + 10, sy, 1, 5);
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(sx + 7, sy, 3, 2);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(sx + 7, sy + 1, 3, 1);
+
+    // Driftwood (mid-left)
+    const dx = 180, dy = 140;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(dx, dy + 4, 28, 1);
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(dx, dy, 28, 4);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(dx, dy, 28, 2);
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(dx + 6, dy + 1, 1, 2);
+    ctx.fillRect(dx + 17, dy + 1, 1, 2);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(dx + 2, dy, 3, 1);
+    ctx.fillRect(dx + 20, dy, 4, 1);
+    // Knot / tip
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(dx - 1, dy + 1, 1, 2);
+    ctx.fillRect(dx + 28, dy + 1, 1, 2);
+
+    // Beach umbrella (top-right, by the water edge)
+    const ux = 330, uy = 65;
+    // Pole
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(ux + 9, uy, 1, 18);
+    // Canopy (half-circle of stripes)
+    ctx.fillStyle = PAL.red;
+    ctx.fillRect(ux, uy + 4, 19, 4);
+    ctx.fillRect(ux + 1, uy + 3, 17, 1);
+    ctx.fillRect(ux + 3, uy + 2, 13, 1);
+    ctx.fillRect(ux + 5, uy + 1, 9, 1);
+    ctx.fillRect(ux + 8, uy, 3, 1);
+    ctx.fillStyle = PAL.white;               // alternating stripes
+    ctx.fillRect(ux + 3, uy + 4, 3, 4);
+    ctx.fillRect(ux + 9, uy + 4, 1, 4);
+    ctx.fillRect(ux + 13, uy + 4, 3, 4);
+    ctx.fillRect(ux + 5, uy + 2, 1, 1);
+    ctx.fillRect(ux + 11, uy + 1, 1, 1);
+    ctx.fillRect(ux + 13, uy + 3, 1, 1);
+    ctx.fillStyle = PAL.redDk;               // shadow band
+    ctx.fillRect(ux + 1, uy + 7, 17, 1);
+    // Top knob
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(ux + 9, uy - 1, 2, 1);
+
+    // Seaweed clump (in water at top-left)
+    const wvx = 90, wvy = 40;
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(wvx, wvy + 2, 1, 6);
+    ctx.fillRect(wvx + 2, wvy + 1, 1, 7);
+    ctx.fillRect(wvx + 4, wvy + 3, 1, 5);
+    ctx.fillRect(wvx + 1, wvy + 4, 1, 3);
+    ctx.fillRect(wvx + 3, wvy + 5, 1, 3);
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(wvx + 2, wvy + 1, 1, 1);
+    ctx.fillRect(wvx, wvy + 2, 1, 1);
+    ctx.fillRect(wvx + 4, wvy + 3, 1, 1);
+
+    // Shells scattered on sand
+    // Spiral shell
+    const shx = 110, shy = 180;
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(shx, shy + 4, 5, 1);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(shx, shy + 1, 4, 3);
+    ctx.fillRect(shx + 1, shy, 3, 1);
+    ctx.fillStyle = PAL.pinkDk;
+    ctx.fillRect(shx + 1, shy + 2, 2, 1);
+    ctx.fillRect(shx, shy + 3, 4, 1);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(shx + 1, shy, 2, 1);
+    // Clam shell
+    const cl = { x: 140, y: 185 };
+    ctx.fillStyle = PAL.shadow;
+    ctx.fillRect(cl.x, cl.y + 3, 6, 1);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(cl.x, cl.y + 1, 6, 2);
+    ctx.fillRect(cl.x + 1, cl.y, 4, 1);
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(cl.x + 1, cl.y + 2, 4, 1);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(cl.x + 2, cl.y + 1, 2, 1);
+    // Small shell fragment
+    ctx.fillStyle = PAL.sandDp;
+    ctx.fillRect(220, 188, 1, 1);
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(240, 196, 2, 1);
+
+    // Small tidal pool (mid-bottom sand)
+    const tpx = 230, tpy = 180;
+    ctx.fillStyle = PAL.sandDp;
+    ctx.beginPath();
+    ctx.ellipse(tpx, tpy, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.sea;
+    ctx.beginPath();
+    ctx.ellipse(tpx, tpy, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.seaLt;
+    ctx.fillRect(tpx - 3, tpy - 1, 3, 1);
+    ctx.fillStyle = PAL.white;               // tiny sparkle
+    ctx.fillRect(tpx + 3, tpy, 1, 1);
+}
+
 function drawTree(ctx, x, y) {
-    // Top-down tree: round canopy seen from above with a tiny brown center
-    // (the trunk peeking through), and a soft shadow.
+    // Top-down tree: layered canopy with leaf-cluster bumps, visible trunk,
+    // light/shadow shading, and a soft oval shadow on the ground.
+    // Ground shadow
     ctx.fillStyle = PAL.shadow;
     ctx.beginPath();
     ctx.ellipse(x + 2, y + 13, 13, 4, 0, 0, Math.PI * 2);
     ctx.fill();
+    // Darkest outer canopy layer (main silhouette)
     ctx.fillStyle = PAL.mintDp;
     ctx.beginPath();
     ctx.arc(x, y, 13, 0, Math.PI * 2);
     ctx.fill();
+    // Mid layer
     ctx.fillStyle = PAL.grassDk;
     ctx.beginPath();
     ctx.arc(x, y, 11, 0, Math.PI * 2);
     ctx.fill();
+    // Leaf cluster bumps on upper-left (lit side)
     ctx.fillStyle = PAL.grass;
     ctx.beginPath();
     ctx.arc(x - 2, y - 2, 7, 0, Math.PI * 2);
+    ctx.arc(x + 4, y - 3, 4, 0, Math.PI * 2);
+    ctx.arc(x - 5, y + 1, 3, 0, Math.PI * 2);
     ctx.fill();
+    // Bright highlights on top of clusters
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x - 4, y - 5, 2, 1);
+    ctx.fillRect(x - 1, y - 6, 2, 1);
+    ctx.fillRect(x + 3, y - 4, 2, 1);
+    ctx.fillRect(x - 6, y - 1, 1, 1);
+    // Leaf-edge silhouettes at canopy perimeter
+    ctx.fillStyle = PAL.mintDp;
+    ctx.fillRect(x + 10, y - 4, 1, 1);
+    ctx.fillRect(x - 11, y + 2, 1, 1);
+    ctx.fillRect(x + 8, y + 8, 1, 1);
+    ctx.fillRect(x - 8, y - 7, 1, 1);
+    // Trunk peeking through center with bark lines
     ctx.fillStyle = PAL.woodDk;
-    ctx.fillRect(x - 1, y - 1, 2, 2);
+    ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(x - 1, y - 1, 1, 1);
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(x, y + 1, 2, 1);
 }
 
 function drawBush(ctx, x, y) {
+    // Soft shadow
     ctx.fillStyle = PAL.shadow;
     ctx.beginPath();
     ctx.ellipse(x + 1, y + 6, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
+    // Outer irregular lobes (dark)
     ctx.fillStyle = PAL.mintDp;
     ctx.beginPath();
     ctx.arc(x, y, 8, 0, Math.PI * 2);
     ctx.arc(x + 5, y - 1, 6, 0, Math.PI * 2);
     ctx.arc(x - 5, y - 1, 6, 0, Math.PI * 2);
+    ctx.arc(x + 3, y + 3, 5, 0, Math.PI * 2);
+    ctx.arc(x - 3, y + 3, 5, 0, Math.PI * 2);
     ctx.fill();
+    // Mid-tone fill
     ctx.fillStyle = PAL.grassDk;
     ctx.beginPath();
     ctx.arc(x, y - 1, 6, 0, Math.PI * 2);
     ctx.arc(x + 4, y - 2, 4, 0, Math.PI * 2);
     ctx.arc(x - 4, y - 2, 4, 0, Math.PI * 2);
     ctx.fill();
-    // Tiny berry highlights
-    ctx.fillStyle = PAL.pink;
+    // Light leaf clusters on top
+    ctx.fillStyle = PAL.grass;
+    ctx.beginPath();
+    ctx.arc(x - 2, y - 3, 3, 0, Math.PI * 2);
+    ctx.arc(x + 2, y - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Bright highlight specks
+    ctx.fillStyle = PAL.grassLt;
+    ctx.fillRect(x - 3, y - 4, 1, 1);
+    ctx.fillRect(x + 1, y - 4, 1, 1);
+    ctx.fillRect(x + 4, y - 3, 1, 1);
+    // Berry clusters (deep red + pink highlight)
+    ctx.fillStyle = PAL.berry;
     ctx.fillRect(x - 1, y - 3, 1, 1);
     ctx.fillRect(x + 3, y - 1, 1, 1);
+    ctx.fillRect(x - 4, y + 1, 1, 1);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(x - 1, y - 3, 1, 1);  // pink sits atop the berry for highlight
+    ctx.fillRect(x + 3, y - 1, 1, 1);
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(x - 4, y + 1, 1, 1);
 }
 
 function drawPond(ctx, pond) {
+    // Rocky edge (darker ring) - irregular sand-stone dots around perimeter
+    ctx.fillStyle = PAL.stoneDk;
+    const cx = pond.x + pond.w / 2;
+    const cy = pond.y + pond.h / 2;
+    // Water body (main ellipse)
     ctx.fillStyle = PAL.sea;
     ctx.beginPath();
-    ctx.ellipse(pond.x + pond.w / 2, pond.y + pond.h / 2, pond.w / 2, pond.h / 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, pond.w / 2, pond.h / 2, 0, 0, Math.PI * 2);
     ctx.fill();
+    // Mid-depth band
+    ctx.fillStyle = PAL.seaMd;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 1, pond.w / 2 - 3, pond.h / 2 - 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Deep center
     ctx.fillStyle = PAL.seaDk;
     ctx.beginPath();
-    ctx.ellipse(pond.x + pond.w / 2, pond.y + pond.h / 2 + 2, pond.w / 2 - 2, pond.h / 2 - 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + 2, pond.w / 2 - 6, pond.h / 2 - 4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Lily pad
-    ctx.fillStyle = PAL.grass;
+    // Rocky edge pebbles scattered around perimeter
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(pond.x + 2, pond.y + 6, 2, 1);
+    ctx.fillRect(pond.x + pond.w - 4, pond.y + 8, 2, 1);
+    ctx.fillRect(pond.x + pond.w / 2 - 2, pond.y, 2, 1);
+    ctx.fillRect(pond.x + 6, pond.y + pond.h - 1, 2, 1);
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(pond.x + 2, pond.y + 6, 1, 1);
+    ctx.fillRect(pond.x + pond.w - 4, pond.y + 8, 1, 1);
+    // Lily pad 1 (larger, with detail)
+    ctx.fillStyle = PAL.grassDk;
     ctx.beginPath();
     ctx.arc(pond.x + 12, pond.y + 10, 5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = PAL.grass;
+    ctx.beginPath();
+    ctx.arc(pond.x + 12, pond.y + 10, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // Lily pad notch (slice in the leaf)
+    ctx.fillStyle = PAL.seaDk;
+    ctx.fillRect(pond.x + 12, pond.y + 9, 1, 2);
+    // Lily flower petals
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(pond.x + 11, pond.y + 8, 2, 2);
-    // Ripples
+    ctx.fillRect(pond.x + 10, pond.y + 9, 1, 1);
+    ctx.fillRect(pond.x + 13, pond.y + 9, 1, 1);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(pond.x + 11, pond.y + 8, 1, 1);
+    ctx.fillStyle = PAL.yellow;
+    ctx.fillRect(pond.x + 12, pond.y + 9, 1, 1);
+    // Lily pad 2 (smaller, on other side)
+    ctx.fillStyle = PAL.grassDk;
+    ctx.beginPath();
+    ctx.arc(pond.x + pond.w - 10, pond.y + pond.h / 2 + 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(pond.x + pond.w - 11, pond.y + pond.h / 2 + 3, 3, 2);
+    // Water plant reed
+    ctx.fillStyle = PAL.grassDk;
+    ctx.fillRect(pond.x + 4, pond.y + 14, 1, 4);
+    ctx.fillStyle = PAL.grass;
+    ctx.fillRect(pond.x + 4, pond.y + 14, 1, 1);
+    ctx.fillRect(pond.x + 5, pond.y + 15, 1, 1);
+    // Ripples (animated)
     ctx.strokeStyle = PAL.cream;
     ctx.lineWidth = 1;
     ctx.beginPath();
     const r = (world.sessionTick * 0.5) % 10;
     ctx.ellipse(pond.x + pond.w / 2 + 6, pond.y + pond.h / 2, r, r * 0.5, 0, 0, Math.PI * 2);
     ctx.stroke();
+    // Static sparkle
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(cx - 4, cy - 4, 1, 1);
+    ctx.fillRect(cx + 8, cy + 1, 1, 1);
 }
 
 function drawBed(ctx, bed, pillowOff) {
     const pOff = pillowOff || 0;
-    // Bed frame
+    // Bed frame (dark wood base)
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(bed.x, bed.y + bed.h - 12, bed.w, 12);
+    // Frame highlight (top edge)
     ctx.fillStyle = PAL.wood;
     ctx.fillRect(bed.x + 2, bed.y + bed.h - 10, bed.w - 4, 6);
-    // Headboard
+    // Frame wood grain
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(bed.x + 8, bed.y + bed.h - 8, bed.w - 16, 1);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(bed.x + 4, bed.y + bed.h - 10, 6, 1);
+    // Headboard (carved detail)
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(bed.x + bed.w - 6, bed.y, 6, bed.h);
-    // Pillow (with ambient sway)
+    // Headboard carved scallops
+    ctx.fillStyle = PAL.wood;
+    ctx.fillRect(bed.x + bed.w - 5, bed.y + 2, 4, 2);
+    ctx.fillRect(bed.x + bed.w - 5, bed.y + 8, 4, 2);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(bed.x + bed.w - 5, bed.y + 2, 2, 1);
+    // Headboard trim
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(bed.x + bed.w - 6, bed.y + bed.h - 13, 6, 1);
+    // Pillow (fluffy, with ambient sway)
     ctx.fillStyle = PAL.white;
     ctx.fillRect(bed.x + bed.w - 26 + pOff, bed.y + 8, 18, 10);
+    // Pillow shadow under
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(bed.x + bed.w - 26 + pOff, bed.y + 17, 18, 1);
+    // Pillow shading
+    ctx.fillStyle = PAL.creamDk;
+    ctx.fillRect(bed.x + bed.w - 10 + pOff, bed.y + 10, 1, 7);
+    // Pillow top highlight
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(bed.x + bed.w - 24 + pOff, bed.y + 9, 6, 1);
+    // Pillow top outline
     ctx.fillStyle = PAL.outline;
     ctx.fillRect(bed.x + bed.w - 26 + pOff, bed.y + 8, 18, 1);
-    // Blanket
+    // Blanket (quilted pink)
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(bed.x + 4, bed.y + 16, bed.w - 30, bed.h - 28);
     // Blanket stripes
@@ -2913,28 +4159,82 @@ function drawBed(ctx, bed, pillowOff) {
     for (let i = 0; i < 4; i++) {
         ctx.fillRect(bed.x + 4 + i * 12, bed.y + 16, 4, bed.h - 28);
     }
+    // Quilted stitch marks (small cross-hatches)
+    ctx.fillStyle = PAL.pinkLt;
+    for (let i = 0; i < 4; i++) {
+        ctx.fillRect(bed.x + 10 + i * 12, bed.y + 18, 1, 1);
+        ctx.fillRect(bed.x + 10 + i * 12, bed.y + 22, 1, 1);
+    }
+    ctx.fillStyle = PAL.redDk;
+    for (let i = 0; i < 4; i++) {
+        ctx.fillRect(bed.x + 5 + i * 12, bed.y + 20, 1, 1);
+    }
+    // Blanket top hem line
+    ctx.fillStyle = PAL.redDk;
+    ctx.fillRect(bed.x + 4, bed.y + 16, bed.w - 30, 1);
 }
 
 function drawToyBox(ctx, x, y, fill) {
     // Top-down chest: open lid with a slightly inset interior
     ctx.fillStyle = PAL.shadow;
     ctx.fillRect(x + 2, y + 22, 34, 2);
+    // Outer frame
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(x, y, 36, 24);
+    // Inner plank face
     ctx.fillStyle = PAL.wood;
     ctx.fillRect(x + 2, y + 2, 32, 20);
     // Plank seams
     ctx.fillStyle = PAL.woodDk;
     ctx.fillRect(x + 12, y + 2, 1, 20);
     ctx.fillRect(x + 23, y + 2, 1, 20);
-    // Yellow tag
+    // Wood grain (horizontal streaks on each plank)
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 3, y + 7, 9, 1);
+    ctx.fillRect(x + 13, y + 15, 10, 1);
+    ctx.fillRect(x + 24, y + 6, 10, 1);
+    ctx.fillStyle = PAL.woodLt;
+    ctx.fillRect(x + 3, y + 4, 8, 1);
+    ctx.fillRect(x + 14, y + 5, 8, 1);
+    ctx.fillRect(x + 25, y + 12, 8, 1);
+    // Knot circles on a plank
+    ctx.fillStyle = PAL.woodDp;
+    ctx.fillRect(x + 6, y + 11, 2, 2);
+    ctx.fillRect(x + 7, y + 10, 1, 1);
+    ctx.fillRect(x + 7, y + 13, 1, 1);
+    // Metal hinges (top corners)
+    ctx.fillStyle = PAL.stoneDk;
+    ctx.fillRect(x + 3, y, 5, 3);
+    ctx.fillRect(x + 28, y, 5, 3);
+    ctx.fillStyle = PAL.stoneLt;
+    ctx.fillRect(x + 3, y, 5, 1);
+    ctx.fillRect(x + 28, y, 5, 1);
+    ctx.fillStyle = PAL.stone;
+    ctx.fillRect(x + 4, y + 1, 1, 1);
+    ctx.fillRect(x + 29, y + 1, 1, 1);
+    // Yellow tag (name plate)
     ctx.fillStyle = PAL.yellow;
     ctx.fillRect(x + 14, y + 9, 8, 6);
     ctx.fillStyle = PAL.orange;
     ctx.fillRect(x + 14, y + 9, 8, 1);
+    ctx.fillStyle = PAL.yellowLt;
+    ctx.fillRect(x + 15, y + 10, 1, 1);
+    // Star doodle on tag
+    ctx.fillStyle = PAL.woodDk;
+    ctx.fillRect(x + 18, y + 11, 1, 3);
+    ctx.fillRect(x + 17, y + 12, 3, 1);
     // Filled yarn balls peek out the top
     for (let i = 0; i < fill; i++) {
         drawYarnBall(ctx, x + 5 + i * 8, y - 4, i, true);
+    }
+    // Peek of a toy block if box is decently filled
+    if (fill >= 2) {
+        ctx.fillStyle = PAL.blue;
+        ctx.fillRect(x + 25, y - 3, 4, 4);
+        ctx.fillStyle = PAL.skyLt;
+        ctx.fillRect(x + 25, y - 3, 2, 1);
+        ctx.fillStyle = PAL.skyDk;
+        ctx.fillRect(x + 28, y, 1, 1);
     }
 }
 
@@ -3421,26 +4721,70 @@ function updateHotspots(dt) {
 function drawHotspots(ctx, room) {
     for (const hs of room.hotspots) {
         if (hs.kind === 'food') {
+            // Red ceramic bowl with shine + varied kibble
+            const cx = hs.x + hs.w / 2;
+            const by = hs.y + hs.h;
+            // Bowl body (semi-circle)
             ctx.fillStyle = PAL.red;
             ctx.beginPath();
-            ctx.ellipse(hs.x + hs.w / 2, hs.y + hs.h, hs.w / 2, hs.h / 2, 0, Math.PI, Math.PI * 2);
+            ctx.ellipse(cx, by, hs.w / 2, hs.h / 2, 0, Math.PI, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = PAL.peachDk;
-            ctx.fillRect(hs.x, hs.y + hs.h - 2, hs.w, 2);
-            // Kibble
+            // Bowl rim band (darker)
+            ctx.fillStyle = PAL.redDk;
+            ctx.fillRect(hs.x + 1, hs.y + hs.h - 2, hs.w - 2, 2);
+            // Bowl shine highlight (upper-left)
+            ctx.fillStyle = PAL.pinkLt;
+            ctx.fillRect(hs.x + 3, hs.y + hs.h - 5, 3, 1);
+            ctx.fillRect(hs.x + 2, hs.y + hs.h - 4, 1, 1);
+            // Bowl base darker line
+            ctx.fillStyle = PAL.woodDp;
+            ctx.fillRect(hs.x + 2, hs.y + hs.h - 1, hs.w - 4, 1);
+            // Kibble (varied shapes, richer palette)
             ctx.fillStyle = PAL.wood;
             ctx.fillRect(hs.x + 4, hs.y + 3, 3, 3);
             ctx.fillRect(hs.x + 10, hs.y + 2, 3, 3);
             ctx.fillRect(hs.x + 16, hs.y + 4, 3, 3);
+            // Kibble shading
+            ctx.fillStyle = PAL.woodDk;
+            ctx.fillRect(hs.x + 4, hs.y + 5, 3, 1);
+            ctx.fillRect(hs.x + 10, hs.y + 4, 3, 1);
+            ctx.fillRect(hs.x + 16, hs.y + 6, 3, 1);
+            // Kibble highlights
+            ctx.fillStyle = PAL.woodLt;
+            ctx.fillRect(hs.x + 4, hs.y + 3, 1, 1);
+            ctx.fillRect(hs.x + 10, hs.y + 2, 1, 1);
+            ctx.fillRect(hs.x + 16, hs.y + 4, 1, 1);
+            // Stray crumb
+            ctx.fillStyle = PAL.woodDk;
+            ctx.fillRect(hs.x + 8, hs.y + 6, 1, 1);
+            ctx.fillRect(hs.x + 14, hs.y + 7, 1, 1);
         } else if (hs.kind === 'milk') {
+            // Blue ceramic bowl with milk surface reflection
+            const cx = hs.x + hs.w / 2;
+            const by = hs.y + hs.h;
+            // Outer bowl (sky blue)
             ctx.fillStyle = PAL.sky;
             ctx.beginPath();
-            ctx.ellipse(hs.x + hs.w / 2, hs.y + hs.h, hs.w / 2, hs.h / 2, 0, Math.PI, Math.PI * 2);
+            ctx.ellipse(cx, by, hs.w / 2, hs.h / 2, 0, Math.PI, Math.PI * 2);
             ctx.fill();
+            // Bowl rim
+            ctx.fillStyle = PAL.skyDk;
+            ctx.fillRect(hs.x + 1, hs.y + hs.h - 2, hs.w - 2, 2);
+            // Bowl shine
+            ctx.fillStyle = PAL.skyLt;
+            ctx.fillRect(hs.x + 3, hs.y + hs.h - 5, 3, 1);
+            // Milk pool
             ctx.fillStyle = PAL.white;
             ctx.beginPath();
-            ctx.ellipse(hs.x + hs.w / 2, hs.y + hs.h - 2, hs.w / 2 - 2, hs.h / 2 - 2, 0, Math.PI, Math.PI * 2);
+            ctx.ellipse(cx, by - 2, hs.w / 2 - 2, hs.h / 2 - 2, 0, Math.PI, Math.PI * 2);
             ctx.fill();
+            // Milk surface reflection (subtle blue)
+            ctx.fillStyle = PAL.skyLt;
+            ctx.fillRect(hs.x + 4, hs.y + 4, 4, 1);
+            ctx.fillRect(hs.x + 10, hs.y + 3, 3, 1);
+            // Bowl base line
+            ctx.fillStyle = PAL.skyDk;
+            ctx.fillRect(hs.x + 2, hs.y + hs.h - 1, hs.w - 4, 1);
         } else if (hs.kind === 'mouse') {
             drawMouse(ctx, hs);
         } else if (hs.kind === 'pond') {
@@ -3463,17 +4807,44 @@ function drawFrog(ctx, pond) {
     if (hopping) {
         fy = pond.y + 10 - Math.sin(hopT * Math.PI) * 20;
     }
+    // Body (wider, with belly detail)
     ctx.fillStyle = PAL.frogG;
     ctx.fillRect(fx, fy, 10, 6);
+    ctx.fillRect(fx - 1, fy + 1, 12, 4);
     ctx.fillRect(fx + 1, fy - 2, 8, 2);
+    // Lighter belly underside
+    ctx.fillStyle = PAL.frogGL;
+    ctx.fillRect(fx, fy + 4, 10, 1);
+    // Body shadow / seam
     ctx.fillStyle = PAL.frogGD;
     ctx.fillRect(fx, fy + 5, 10, 1);
+    ctx.fillRect(fx - 1, fy + 4, 1, 1);
+    ctx.fillRect(fx + 10, fy + 4, 1, 1);
+    // Back darker shading (top)
+    ctx.fillRect(fx + 4, fy + 1, 2, 1);
+    // Webbed feet (front)
+    ctx.fillStyle = PAL.frogG;
+    ctx.fillRect(fx - 1, fy + 5, 2, 2);
+    ctx.fillRect(fx + 9, fy + 5, 2, 2);
+    ctx.fillStyle = PAL.frogGD;
+    ctx.fillRect(fx - 1, fy + 6, 1, 1);
+    ctx.fillRect(fx + 10, fy + 6, 1, 1);
+    // Small smile
+    ctx.fillStyle = PAL.frogGD;
+    ctx.fillRect(fx + 3, fy + 3, 4, 1);
+    ctx.fillStyle = PAL.pinkLt;
+    ctx.fillRect(fx + 4, fy + 3, 2, 1);
     // Eyes — check frog blink ambient state
     const gardenAmb = world.rooms.garden && world.rooms.garden.ambientState;
     const blinkF = gardenAmb ? gardenAmb.frogBlinkFrame : 0;
     const blinkPhase = blinkF > 0 ? (blinkF > 10 ? 1 : blinkF > 5 ? 2 : blinkF > 2 ? 1 : 0) : 0;
     // 0 = open, 1 = half, 2 = closed
     if (blinkPhase < 2) {
+        // Eye sockets (slightly darker)
+        ctx.fillStyle = PAL.frogGD;
+        ctx.fillRect(fx + 1, fy - 3, 3, 1);
+        ctx.fillRect(fx + 5, fy - 3, 3, 1);
+        // Eye whites
         ctx.fillStyle = PAL.white;
         ctx.fillRect(fx + 2, fy - 3, 2, blinkPhase === 1 ? 1 : 2);
         ctx.fillRect(fx + 6, fy - 3, 2, blinkPhase === 1 ? 1 : 2);
@@ -3481,6 +4852,10 @@ function drawFrog(ctx, pond) {
             ctx.fillStyle = PAL.eye;
             ctx.fillRect(fx + 3, fy - 2, 1, 1);
             ctx.fillRect(fx + 7, fy - 2, 1, 1);
+            // Catch-light sparkle
+            ctx.fillStyle = PAL.white;
+            ctx.fillRect(fx + 2, fy - 3, 1, 1);
+            ctx.fillRect(fx + 6, fy - 3, 1, 1);
         }
     } else {
         // Closed — just a line
@@ -3493,9 +4868,26 @@ function drawFrog(ctx, pond) {
 function drawMouse(ctx, hs) {
     const waving = hs.state > 0 && hs.waved;
     const wiggle = waving ? Math.sin(hs.state * 0.4) * 2 : 0;
+    // Body (rounder — corner softening)
     ctx.fillStyle = PAL.mouse;
     ctx.fillRect(hs.x, hs.y, 12, 10);
+    ctx.fillRect(hs.x + 1, hs.y - 1, 10, 1);
+    ctx.fillRect(hs.x + 1, hs.y + 10, 10, 1);
+    // Snout
     ctx.fillRect(hs.x + 12, hs.y + 3, 3, 4);
+    // Lighter belly
+    ctx.fillStyle = PAL.mouseLt;
+    ctx.fillRect(hs.x + 1, hs.y + 7, 10, 2);
+    ctx.fillRect(hs.x + 2, hs.y + 1, 2, 1);
+    // Body shading (bottom-right)
+    ctx.fillStyle = PAL.mouseDk;
+    ctx.fillRect(hs.x, hs.y + 9, 12, 1);
+    ctx.fillRect(hs.x + 11, hs.y + 1, 1, 6);
+    // Fur texture (small dark ticks)
+    ctx.fillStyle = PAL.mouseDk;
+    ctx.fillRect(hs.x + 2, hs.y + 2, 1, 1);
+    ctx.fillRect(hs.x + 6, hs.y + 4, 1, 1);
+    ctx.fillRect(hs.x + 4, hs.y + 7, 1, 1);
     // Ears
     ctx.fillStyle = PAL.mouseDk;
     ctx.fillRect(hs.x + 2, hs.y - 2, 3, 2);
@@ -3503,46 +4895,92 @@ function drawMouse(ctx, hs) {
     ctx.fillStyle = PAL.pink;
     ctx.fillRect(hs.x + 3, hs.y - 1, 1, 1);
     ctx.fillRect(hs.x + 8, hs.y - 1, 1, 1);
-    // Eye
+    // Eye with catch-light
     ctx.fillStyle = PAL.eye;
+    ctx.fillRect(hs.x + 4, hs.y + 4, 2, 2);
+    ctx.fillStyle = PAL.white;
     ctx.fillRect(hs.x + 4, hs.y + 4, 1, 1);
-    // Nose
+    // Whiskers (multiple lines)
+    ctx.fillStyle = PAL.mouseDk;
+    ctx.fillRect(hs.x + 10, hs.y + 5, 4, 1);
+    ctx.fillRect(hs.x + 10, hs.y + 7, 4, 1);
+    ctx.fillRect(hs.x + 11, hs.y + 6, 3, 1);
+    // Nose (slightly larger, more visible)
     ctx.fillStyle = PAL.pinkDk;
-    ctx.fillRect(hs.x + 12, hs.y + 5, 1, 1);
-    // Tail
+    ctx.fillRect(hs.x + 13, hs.y + 5, 2, 1);
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(hs.x + 14, hs.y + 5, 1, 1);
+    // Tiny pink feet
+    ctx.fillStyle = PAL.pink;
+    ctx.fillRect(hs.x + 2, hs.y + 10, 1, 1);
+    ctx.fillRect(hs.x + 9, hs.y + 10, 1, 1);
+    // Tail (curled)
     ctx.strokeStyle = PAL.mouseDk;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(hs.x, hs.y + 7);
-    ctx.lineTo(hs.x - 5, hs.y + 10);
+    ctx.lineTo(hs.x - 3, hs.y + 9);
+    ctx.lineTo(hs.x - 5, hs.y + 8);
+    ctx.lineTo(hs.x - 6, hs.y + 10);
     ctx.stroke();
-    // Waving paw
+    // Waving paw (with a slight fur tick)
     if (waving) {
         ctx.fillStyle = PAL.mouse;
         ctx.fillRect(hs.x - 1, hs.y - 3 + wiggle, 2, 3);
+        ctx.fillStyle = PAL.mouseDk;
+        ctx.fillRect(hs.x - 1, hs.y - 1 + wiggle, 2, 1);
+        ctx.fillStyle = PAL.pink;
+        ctx.fillRect(hs.x - 1, hs.y - 3 + wiggle, 1, 1);
     }
 }
 
 function drawCrab(ctx, hs) {
     const cx = hs.x + hs.offset;
     const cy = hs.y;
+    // Shell (body)
     ctx.fillStyle = PAL.crab;
     ctx.beginPath();
     ctx.ellipse(cx + 10, cy + 7, 8, 5, 0, 0, Math.PI * 2);
     ctx.fill();
+    // Shell highlight (top)
+    ctx.fillStyle = PAL.crabLt;
+    ctx.fillRect(cx + 7, cy + 3, 6, 1);
+    ctx.fillRect(cx + 9, cy + 4, 2, 1);
+    // Shell ridge pattern (hex-ish)
+    ctx.fillStyle = PAL.crabDk;
+    ctx.fillRect(cx + 6, cy + 6, 2, 1);
+    ctx.fillRect(cx + 12, cy + 6, 2, 1);
+    ctx.fillRect(cx + 9, cy + 8, 2, 1);
+    // Shell shadow band
     ctx.fillStyle = PAL.crabDk;
     ctx.fillRect(cx + 3, cy + 10, 14, 2);
-    // Claws
+    // Claws (larger with pincer detail)
     ctx.fillStyle = PAL.crab;
-    ctx.fillRect(cx, cy + 5, 4, 3);
-    ctx.fillRect(cx + 16, cy + 5, 4, 3);
-    // Eyes
+    ctx.fillRect(cx - 1, cy + 5, 5, 3);
+    ctx.fillRect(cx + 16, cy + 5, 5, 3);
+    // Claw pincer split
+    ctx.fillStyle = PAL.crabDk;
+    ctx.fillRect(cx, cy + 6, 1, 1);
+    ctx.fillRect(cx + 19, cy + 6, 1, 1);
+    // Claw highlight
+    ctx.fillStyle = PAL.crabLt;
+    ctx.fillRect(cx, cy + 5, 2, 1);
+    ctx.fillRect(cx + 18, cy + 5, 2, 1);
+    // Eye stalks (short dark lines)
+    ctx.fillStyle = PAL.crabDk;
+    ctx.fillRect(cx + 9, cy + 1, 1, 2);
+    ctx.fillRect(cx + 13, cy + 1, 1, 2);
+    // Eye whites
     ctx.fillStyle = PAL.white;
     ctx.fillRect(cx + 8, cy + 2, 2, 2);
     ctx.fillRect(cx + 12, cy + 2, 2, 2);
     ctx.fillStyle = PAL.eye;
     ctx.fillRect(cx + 9, cy + 2, 1, 1);
     ctx.fillRect(cx + 13, cy + 2, 1, 1);
+    // Eye catch-light
+    ctx.fillStyle = PAL.white;
+    ctx.fillRect(cx + 9, cy + 3, 1, 1);
+    ctx.fillRect(cx + 13, cy + 3, 1, 1);
     // Legs
     ctx.fillStyle = PAL.crabDk;
     const legShift = Math.floor(hs.offset / 4) % 2;
@@ -3550,6 +4988,9 @@ function drawCrab(ctx, hs) {
         ctx.fillRect(cx + 2 + i * 3, cy + 12, 1, 2 + legShift);
         ctx.fillRect(cx + 13 + i * 3, cy + 12, 1, 2 + (1 - legShift));
     }
+    // Tiny mouth line
+    ctx.fillStyle = PAL.crabDk;
+    ctx.fillRect(cx + 9, cy + 9, 2, 1);
 }
 
 // ==================== COLLECTIBLES ====================

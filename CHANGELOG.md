@@ -9,6 +9,28 @@ The convention and update workflow are documented in `CLAUDE.md` under
 
 ---
 
+## v11 — Full Stardew art quality pass: tile density, sprite charm, room decorations (`<pending>`)
+
+**What changed**
+
+- **Palette expansion:** Grew `PAL` from ~42 entries to ~60 with intermediate shades (`grassLt`, `grassMd`, `seaLt`, `seaMd`, `seaDp`, `sandLt`, `sandDp`, `stoneLt`, `stoneDk`, `woodLt`, `woodDp`, `creamDk`, `pinkLt`, `lavLt`, `yellowLt`, `mouseLt`, `frogGL`, `crabLt`, `earth`, `moss`, `berry`, `redDk`, `skyLt`) so every major surface supports 3-shade gradients.
+- **Grass tiles (`gA`–`gD`):** 1–5 fillRect calls → 8–12. Each tile now has seeded dark blades, light highlights, mid-tone filler, and variant accents (earth speck for gA, tall blade cluster for gB, clover for gC, white daisy with stem/leaf for gD).
+- **Surface tiles (stone, water, kitchen, bedroom, sand, sea, rock, rug):** All rewritten with 5–10 fillRect calls. Cobblestones have rounded edges, mortar shadow, and moss specks. Water has depth gradients, ripple lines, and sparkles. Kitchen tiles have top-left shine, grout shadow, and occasional diamond motifs. Bedroom planks have wood grain streaks, knots, and nail heads. Sand has ripple ridges, shell fragments, and wet-sand shine. Beach rocks have highlights, cracks, and lichen. Rugs have woven crosshatch texture and fringed borders.
+- **Decoration tiles:** Flowers (`flW`/`flP`/`flY`) are now 5-petal shapes with stem, leaf, tinted center, and color-specific shading instead of cross-shaped dots. Bush (`bushS`) has irregular lobes, leaf-cluster bumps, berry clusters, and a seeded tiny flower variant. Mouse hole (`mholeA`) has an arched shape with interior depth, wood frame, and top-arch highlight. Tree foliage overlay has layered leaf clusters, bright highlights, leaf-edge silhouettes, and visible trunk through the canopy.
+- **Kitten sprite (all 22 frames):** Extended `KITTEN_PAL` from 8 to 11 entries (added `8` pure-white catch-light, `9` deep shadow, `a` warm cheek blush). Replaced every eye-row `44` with `84` across 14 front/back-facing frames for top-left catch-lights in both 2×1 eyes. Replaced cheek `3`s with softer `a` warm blush on face rows. Side-view walk frames (6–8) got a `8` catch-light pixel adjacent to the single eye. Sleep-curl and purr closed-eye frames untouched.
+- **Creatures and props:** `drawTree` now has lit leaf clusters with bright highlights and leaf-edge silhouettes; `drawBush` has irregular lobes + multi-color berry highlights; `drawPond` has rocky edge pebbles, two lily pads with notched detail + petals, a water-plant reed, and depth gradient; `drawFrog` is larger with belly shading, webbed feet, a smile, eye catch-lights; `drawMouse` has rounder body, fur ticks, multi-line whiskers, tail curl, tiny pink feet, eye catch-light; `drawCrab` has shell ridges, claw highlights, eye stalks, catch-lights, mouth line; `drawBed` has quilted stitch marks, carved headboard scallops, pillow shading; `drawToyBox` has plank grain, knot circles, metal hinges with highlights, a star doodle on the name-tag, and a blue toy block peeking when filled.
+- **Bowls:** Food and milk bowls now have ceramic rim shadow, top-left shine highlights, base shadow lines, kibble shading + highlight pixels, and milk-surface subtle reflections.
+- **Room decorations:** Added four new `draw*Deco` functions called from each room's draw pipeline: garden gets wooden signpost with heart, sky-blue watering can with spout+handle, rock garden cluster with moss, red-and-white toadstool cluster, scattered fallen leaves. Kitchen gets wall clock with pendulum, small table with teacup+saucer+steam, potted plant with flower bud, jar shelf with honey/jam/herbs, patterned door mat. Bedroom gets nightstand with warm lamp halo, framed landscape picture, scattered ABC/1 toy blocks, colorful bookshelf with 9 books, plush teddy bear with bow tie. Beach gets multi-tower sandcastle with flag and door, long driftwood log, striped beach umbrella, seaweed clump, spiral shell + clam + fragment, small tidal pool.
+- **Shelf (`drawShelf`):** Plank is now 5px tall with layered wood grain streaks, knots, and top highlight. Bins gained cream back-panels with top highlight, subtle side borders, and bottom shadow so each collection group reads as a distinct compartment.
+
+**Why**
+
+v1–v10 built the systems (sprite renderer, tile maps, animation state, reaction beats, ambient life, audio, transitions). The art filling those systems was still minimal — a tile was 1–4 fillRect calls, the kitten was functional but boxy, rooms had large empty zones between hotspots, creatures were geometric primitives. v11 is the art quality pass: every tile now uses 5–12 detail pixels driven by `seed` for per-tile variety, every creature has shading and catch-lights, and each room is packed with cozy decoration. The goal was a screenshot that reads as "hand-crafted pixel world" rather than "programmer-art demo with good animation," aligned with the Stardew-adjacent bar the brainstorm set.
+
+Kept within the fillRect-only constraint for tile draw functions (they run 24×12 = 288 times per frame, so arcs would be too expensive); creatures and decorations use arcs/ellipses since there are only a handful per room. File grew from 200 KB to ~232 KB — well within the single-file budget. No engine changes, no animation changes, no new gameplay — purely visual density.
+
+---
+
 ## v10 — Layered ambient + reaction audio, smooth scene transitions (`6d16242`)
 
 **What changed**
